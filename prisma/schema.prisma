@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Track {
+  id          String   @id @default(uuid())
+  title       String
+  type        String
+  description String?
+  goals       String   
+  routine     String? 
+  createdAt   DateTime @default(now())
+  logs        Log[]
+}
+
+model Log {
+  id        String   @id @default(uuid())
+  content   String
+  feedback  String?
+  metrics   String?
+  createdAt DateTime @default(now())
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id])
+}
