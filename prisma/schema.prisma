@@ -7,26 +7,54 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model Track {
-  id        String    @id @default(uuid())
-  name      String
-  type      String    // "ANCHOR" or "GROWTH"
-  goals     String    // JSON string of goals
-  createdAt DateTime  @default(now())
+// --- 1. GOALS ---
+// For long-term targets (e.g., "Run a marathon", "Write a blog")
+model Goal {
+  id          String   @id @default(uuid())
+  title       String
+  description String?  // Optional details
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  // קשר להודעות: לכל מסלול יכולות להיות הרבה הודעות
-  messages  Message[]
+  // Future: We can add a 'ProgressLog' table here later
 }
 
+// --- 2. ANCHORS ---
+// For fixed constraints (e.g., "Work 9-5", "Kids pickup")
+model Anchor {
+  id        String   @id @default(uuid())
+  title     String
+  day       String   // e.g., "Sunday", "Monday"
+  startTime String   // e.g., "09:00"
+  endTime   String   // e.g., "17:00"
+  createdAt DateTime @default(now())
+}
+
+// --- 3. LISTS    ---
+// Dynamic lists (e.g., "Groceries", "Ideas")
+model List {
+  id        String     @id @default(uuid())
+  title     String     @unique // e.g., "Groceries"
+  items     ListItem[]
+  createdAt DateTime   @default(now())
+}
+
+model ListItem {
+  id        String   @id @default(uuid())
+  content   String   // e.g., "Milk", "Call mom"
+  isChecked Boolean  @default(false)
+  
+  // Relation to List
+  listId    String
+  list      List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+}
+
+// --- 4. CHAT HISTORY ---
+// Single stream, no tracks attached anymore
 model Message {
   id        String   @id @default(uuid())
   role      String   // "user" or "assistant"
   content   String
   createdAt DateTime @default(now())
-
-  // שיוך אופציונלי למסלול
-  // אם trackId ריק -> זה שייך לצ'אט הראשי (Main Chat)
-  // אם trackId מלא -> זה שייך למסלול הספציפי
-  trackId   String?
-  track     Track?   @relation(fields: [trackId], references: [id], onDelete: Cascade)
 }

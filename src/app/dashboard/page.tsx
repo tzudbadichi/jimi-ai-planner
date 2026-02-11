@@ -1,110 +1,100 @@
 import { db } from "@/lib/db"
 import { ChatArea } from "@/components/ChatArea"
-import Link from "next/link"
 
-// Define props for the server component to read URL parameters (e.g., ?trackId=123)
-interface DashboardProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
+// --- WIDGET COMPONENTS ---
 
-export default async function DashboardPage({ searchParams }: DashboardProps) {
-  // 1. Resolve search params (Next.js 15 requirement)
-  const params = await searchParams
-  const activeTrackId = typeof params.trackId === 'string' ? params.trackId : undefined
+const Widget = ({ title, icon, children }: { title: string, icon: string, children: React.ReactNode }) => (
+  <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <span>{icon}</span> {title}
+    </h2>
+    <div className="space-y-3">
+      {children}
+    </div>
+  </div>
+)
 
-  // 2. Fetch all tracks for the sidebar
-  const tracks = await db.track.findMany({
-    orderBy: { createdAt: 'asc' }
-  })
+const GoalCard = ({ title }: { title: string }) => (
+  <div className="p-3 bg-gradient-to-r from-blue-50 to-white rounded-xl border border-blue-100 flex items-center gap-3">
+    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+    <span className="font-medium text-blue-900">{title}</span>
+  </div>
+)
 
-  // 3. Determine which chat to load (Main Chat vs. Specific Track Chat)
-  const activeTrack = activeTrackId 
-    ? tracks.find(t => t.id === activeTrackId) 
-    : null
+const AnchorCard = ({ title, time, day }: { title: string, time: string, day: string }) => (
+  <div className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+    <div className="flex items-center gap-2">
+      <span className="text-gray-400">⚓</span>
+      <span className="text-gray-700 font-medium">{title}</span>
+    </div>
+    <div className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">
+      {day} • {time}
+    </div>
+  </div>
+)
 
-  // 4. Fetch the relevant message history
-  const messages = await db.message.findMany({
-    where: {
-      trackId: activeTrackId || null // null = Main Chat
-    },
-    orderBy: { createdAt: 'asc' }
-  })
+const ListCard = ({ title, items }: { title: string, items: any[] }) => (
+  <div className="border-t border-gray-50 pt-3 first:border-0 first:pt-0">
+    <h3 className="text-sm font-bold text-indigo-600 mb-2 uppercase tracking-wider">{title}</h3>
+    <ul className="space-y-1 pl-2">
+      {items.map((item: any) => (
+        <li key={item.id} className="flex items-center gap-2 text-sm text-gray-600">
+          <input type="checkbox" checked={item.isChecked} readOnly className="rounded text-indigo-500 focus:ring-0" />
+          <span className={item.isChecked ? "line-through opacity-50" : ""}>{item.content}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
+
+// --- MAIN PAGE ---
+
+export default async function DashboardPage() {
+  // שליפת נתונים במקביל מהטבלאות החדשות
+  const [goals, anchors, lists, messages] = await Promise.all([
+    db.goal.findMany(),
+    db.anchor.findMany(),
+    db.list.findMany({ include: { items: true } }),
+    db.message.findMany({ orderBy: { createdAt: 'asc' } })
+  ])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 py-4 px-8 flex justify-between items-center sticky top-0 z-10">
-        <h1 className="text-2xl font-black text-indigo-600 tracking-tight">JIMI.AI</h1>
-        <div className="text-sm text-gray-500">
-          {activeTrack ? `Focus Mode: ${activeTrack.name}` : "General Overview"}
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
+    <div className="min-h-screen bg-[#F3F4F6] p-4 md:p-8 font-sans">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Sidebar: Tracks Navigation */}
-        <div className="md:col-span-4 space-y-4">
-          <h2 className="text-lg font-bold text-gray-700 mb-2">My Tracks</h2>
+        {/* LEFT COLUMN: THE DASHBOARD */}
+        <div className="lg:col-span-4 space-y-6">
           
-          {/* Button: Main Lobby */}
-          <Link 
-            href="/dashboard"
-            className={`block w-full text-right p-4 rounded-xl transition-all border ${
-              !activeTrackId 
-                ? 'bg-indigo-600 text-white shadow-lg border-indigo-600' 
-                : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
-            }`}
-          >
-            <div className="font-bold">🏠 The Lobby</div>
-            <div className="text-xs opacity-80 mt-1">General daily planning</div>
-          </Link>
+          <Widget title="יעדים וצמיחה" icon="🎯">
+            {goals.length === 0 && <p className="text-gray-400 text-sm">אין יעדים פעילים.</p>}
+            {goals.map(g => <GoalCard key={g.id} title={g.title} />)}
+          </Widget>
 
-          {/* List: Dynamic Tracks */}
-          <div className="space-y-2">
-            {tracks.map((track) => {
-              const isActive = track.id === activeTrackId
-              const goals = JSON.parse(track.goals) as string[]
+          <Widget title="עוגנים בלו״ז" icon="⚓">
+            {anchors.length === 0 && <p className="text-gray-400 text-sm">הלו״ז פנוי לגמרי.</p>}
+            {anchors.map(a => (
+              <AnchorCard 
+                key={a.id} 
+                title={a.title} 
+                day={a.day} 
+                time={`${a.startTime}-${a.endTime}`} 
+              />
+            ))}
+          </Widget>
 
-              return (
-                <Link 
-                  key={track.id} 
-                  href={`/dashboard?trackId=${track.id}`}
-                  className={`block w-full text-right p-4 rounded-xl transition-all border ${
-                    isActive 
-                      ? 'bg-white border-indigo-500 ring-2 ring-indigo-100 shadow-md' 
-                      : 'bg-white border-gray-200 hover:border-indigo-300 hover:shadow-sm'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                      track.type === 'ANCHOR' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {track.type}
-                    </span>
-                    <span className="font-bold text-gray-800">{track.name}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {goals[0]}...
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
+          <Widget title="רשימות שוטפות" icon="📝">
+             {lists.length === 0 && <p className="text-gray-400 text-sm">אין רשימות פתוחות.</p>}
+             {lists.map(l => <ListCard key={l.id} title={l.title} items={l.items} />)}
+          </Widget>
+
         </div>
 
-        {/* Right Main Area: The Chat Interface */}
-        <div className="md:col-span-8">
-          <ChatArea 
-            // We pass a key here to force the component to re-render when changing tracks
-            key={activeTrackId || 'home'} 
-            initialMessages={messages} 
-            trackId={activeTrackId}
-            trackName={activeTrack?.name}
-          />
+        {/* RIGHT COLUMN: THE CHAT */}
+        <div className="lg:col-span-8">
+          <ChatArea initialMessages={messages} />
         </div>
 
-      </main>
+      </div>
     </div>
   )
 }
