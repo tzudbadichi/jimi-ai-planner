@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jimi - Personal AI Assistant & Automation Hub
 
-## Getting Started
+Jimi is a personal dashboard and automation center designed to manage daily tasks, monitor background processes, and visualize system health. It combines a chat interface for natural language interaction with a structured dashboard for tracking anchors (habits/events) and automated scripts.
 
-First, run the development server:
+## 🚀 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+* **Smart Dashboard:** A split-screen layout featuring:
+    * **Chat Interface:** Real-time communication with the AI assistant.
+    * **Process Monitor:** Visual grid of automation scripts (Python/Node.js) with status indicators (Success/Failure/Running).
+    * **Anchors & Habits:** Tracking of daily routines and time-based events.
+    * **Schedule Builder:** Dynamic daily planning area.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+* **Automation Engine:**
+    * Executes scripts and logs their output to a PostgreSQL database.
+    * Tracks execution time, status, and error logs.
+    * Provides visual feedback on process health (green/red indicators).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+* **Tech Stack:**
+    * **Frontend:** Next.js 14+ (App Router), Tailwind CSS, Lucide React (Icons).
+    * **Backend:** Server Actions, Prisma ORM.
+    * **Database:** PostgreSQL (via Neon/Supabase or local).
+    * **AI Integration:** (Planned) Google Gemini / OpenAI API for context-aware responses.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📂 Project Structure
 
-## Learn More
+├── src/
+│   ├── app/                # Next.js App Router pages
+│   │   ├── dashboard/      # Main dashboard view
+│   │   ├── actions.ts      # Server Actions (DB operations)
+│   ├── components/         # React UI components
+│   │   ├── ChatArea.tsx    # Chat interface logic
+│   │   ├── ProcessGrid.tsx # Automation status cards
+│   │   ├── AnchorsSidebar.tsx # Daily habits tracking
+│   ├── lib/
+│   │   ├── db.ts           # Prisma client instance
+│   │   ├── utils.ts        # Helper functions
+├── prisma/
+│   ├── schema.prisma       # Database schema definition
+├── public/                 # Static assets
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Setup & Installation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/your-username/jimi.git](https://github.com/your-username/jimi.git)
+    cd jimi
+    ```
 
-## Deploy on Vercel
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3.  **Environment Variables:**
+    Create a `.env` file in the root directory and add your database connection string:
+    ```env
+    DATABASE_URL="postgresql://user:password@localhost:5432/jimi_db"
+    ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4.  **Database Migration:**
+    ```bash
+    npx prisma generate
+    npx prisma db push
+    ```
+
+5.  **Run Development Server:**
+    ```bash
+    npm run dev
+    ```
+
+## 📌 Roadmap & TODO
+
+* [ ] **Interactive Process Logs:** Click on a process card to view detailed logs and history graphs.
+* [ ] **Schedule Builder Logic:** Implement the AI logic to generate a daily schedule based on tasks and anchors.
+* [ ] **Mobile Responsiveness:** Optimize the layout for phone screens.
+* [ ] **Voice Command:** Integration for voice-to-text input.
+
+## 🤝 Contributing
+
+This is a personal project, but suggestions and improvements are welcome!
+
+---
+*Built with ❤️ by Zvi Yehuda & Gemini*
