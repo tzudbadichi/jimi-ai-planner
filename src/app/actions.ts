@@ -14,143 +14,177 @@ export async function getChatHistory() {
 // --- 2. THE SMART BRAIN (ROUTER) ---
 export async function submitMessage(content: string) {
   try {
-    console.log("--- 1. NEW MESSAGE RECEIVED:", content); 
+    console.log("🟢 1. USER INPUT:", content);
 
-    // A. Save User Message to DB
-    await db.message.create({
-      data: { role: 'user', content }
-    })
+    // A. Save User Message
+    await db.message.create({ data: { role: 'user', content } })
 
-    // B. Fetch Context (Existing Lists)
-    // We fetch existing list titles to help the AI categorize items correctly
-    const existingLists = await db.list.findMany({ select: { title: true } });
-    const listNames = existingLists.map(l => l.title).join(", ");
+    // B. Context: Fetch existing Anchors & Processes WITH IDs
+    const anchors = await db.anchor.findMany();
+    const processes = await db.process.findMany();
+    
+    const contextStr = `
+      Existing Anchors: ${anchors.map(a => `[ID: ${a.id}] ${a.title} (${a.startTime}-${a.endTime})`).join(" | ") || "None"}
+      Existing Processes: ${processes.map(p => `[ID: ${p.id}] ${p.title}`).join(" | ") || "None"}
+    `;
 
-    // C. Construct the Classification Prompt
-    // We instruct the AI to act as a router and return strict JSON
-    const routerPrompt = `
-      You are an intelligent OS named "Jimi". 
-      Your goal is to classify the user's intent and execute actions on their life database.
+    // C. The Multi-Action Prompt (Supports empty actions for chat-only)
+    const prompt = `
+      System: You are "Jimi", an advanced AI Life OS.
       
-      Current Date: ${new Date().toLocaleDateString('he-IL')}
-      Existing Lists: ${listNames || "None"}
+      CONTEXT:
+      - Current Date: ${new Date().toLocaleDateString('he-IL')}
+      - ${contextStr}
 
-      User Input: "${content}"
+      USER INPUT: "${content}"
 
-      Analyze the input and return a JSON object with this EXACT structure:
+      INSTRUCTIONS:
+      Analyze the input. Determine if the user is making a general conversation OR if they are stating an actionable item that affects their schedule or processes.
+      
+      If it's just conversation, leave the "actions" array empty.
+      If there are actionable items, break them down into a LIST of distinct actions. Do not ask for permission to act. If it implies a process or an anchor, execute the creation.
+
+      OUTPUT JSON STRUCTURE:
       {
-        "action": "CREATE_GOAL" | "CREATE_ANCHOR" | "ADD_TO_LIST" | "CHAT",
-        "data": { ...specific fields... },
-        "responseToUser": "A friendly Hebrew response confirming the action or answering the question"
+        "actions": [
+          {
+            "type": "CREATE_ANCHOR" | "CREATE_PROCESS" | "ADD_LOG" | "DELETE_ANCHOR" | "DELETE_PROCESS" | "CLEAR_ALL",
+            "data": { 
+               // For CREATE_ANCHOR: "title", "startTime", "endTime", "day"
+               // For CREATE_PROCESS: "title", "goal"
+               // For ADD_LOG: "processTitle", "content"
+               // For DELETE_ANCHOR / DELETE_PROCESS: "id" (MUST be the exact ID from the context)
+               // For CLEAR_ALL: {}
+            }
+          }
+        ],
+        "responseToUser": "Hebrew response answering the user or summarizing what was configured/deleted."
       }
-
-      DETAILS FOR ACTIONS:
-      1. If "CREATE_GOAL" (Long term targets):
-         data: { "title": "..." }
       
-      2. If "CREATE_ANCHOR" (Fixed constraints like work/kids):
-         data: { "title": "...", "day": "Sunday/Monday/...", "startTime": "HH:MM", "endTime": "HH:MM" }
-      
-      3. If "ADD_TO_LIST" (Shopping, Tasks, Ideas):
-         data: { "listName": "Groceries/Tasks/...", "item": "..." }
-         * If the list doesn't exist, use a logical name.
-      
-      4. If "CHAT" (General conversation, questions, advice):
-         data: {}
-      
-      IMPORTANT: 
-      - The "responseToUser" must be in Hebrew.
-      - Be witty and concise in the response.
-      - Return ONLY the raw JSON. No markdown formatting.
+      RULES:
+      1. Return strictly valid JSON.
+      2. If no database action is required (general chat), "actions" MUST be an empty array: [].
+      3. If user wants to delete a specific process or anchor, you MUST use the exact ID provided in the CONTEXT. Do not use the title.
     `
 
     // D. Call AI
-    const aiRawText = await generateText(routerPrompt)
-    console.log("--- 2. AI RAW RESPONSE:", aiRawText); 
+    const raw = await generateText(prompt);
+    console.log("🟡 2. AI RAW:", raw);
 
-    // E. JSON Parsing & Cleaning
-    // Sometimes AI wraps JSON in markdown blocks. We extract the JSON string manually.
-    const firstBrace = aiRawText.indexOf('{');
-    const lastBrace = aiRawText.lastIndexOf('}');
-    
-    let parsedResult;
-    
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      const jsonOnly = aiRawText.substring(firstBrace, lastBrace + 1);
-      try {
-        parsedResult = JSON.parse(jsonOnly);
-        console.log("--- 3. PARSED ACTION:", parsedResult.action); 
-      } catch (e) {
-        console.error("JSON PARSE FAILED on:", jsonOnly);
-      }
-    }
+    // E. Clean JSON
+    let cleanJson = raw.replace(/```json|```/g, "").trim();
+    const firstBrace = cleanJson.indexOf('{');
+    const lastBrace = cleanJson.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
 
-    // Fallback: If parsing failed, treat as a normal chat message
-    if (!parsedResult) {
-      parsedResult = { action: "CHAT", responseToUser: aiRawText, data: {} };
-    }
+    const result = JSON.parse(cleanJson);
+    console.log("🔵 3. PARSED ACTIONS:", result.actions ? result.actions.length : 0);
 
-    // F. Execute Database Actions based on AI decision
-    switch (parsedResult.action) {
-      case "CREATE_GOAL":
-        console.log("Executing CREATE_GOAL");
-        await db.goal.create({
-          data: { title: parsedResult.data.title }
-        });
-        break;
+    // F. Execute Loop
+    if (result.actions && Array.isArray(result.actions)) {
+      for (const action of result.actions) {
+        switch (action.type) {
+          case "CREATE_ANCHOR":
+            console.log("-> Creating Anchor:", action.data.title);
+            await db.anchor.create({
+              data: {
+                title: action.data.title,
+                startTime: action.data.startTime || "00:00",
+                endTime: action.data.endTime || "00:00",
+                day: action.data.day || "Daily"
+              }
+            });
+            break;
 
-      case "CREATE_ANCHOR":
-        console.log("Executing CREATE_ANCHOR");
-        await db.anchor.create({
-          data: {
-            title: parsedResult.data.title,
-            // Default values if AI misses them
-            day: parsedResult.data.day || "General",
-            startTime: parsedResult.data.startTime || "00:00",
-            endTime: parsedResult.data.endTime || "00:00"
-          }
-        });
-        break;
+          case "CREATE_PROCESS":
+            console.log("-> Creating Process:", action.data.title);
+            const existingProc = await db.process.findUnique({ where: { title: action.data.title } });
+            if (!existingProc) {
+              await db.process.create({
+                data: { title: action.data.title, goal: action.data.goal || null }
+              });
+            }
+            break;
 
-      case "ADD_TO_LIST":
-        console.log("Executing ADD_TO_LIST");
-        const listName = parsedResult.data.listName || "General";
-        
-        // Find or Create the List
-        let list = await db.list.findUnique({ where: { title: listName } });
-        if (!list) {
-          list = await db.list.create({ data: { title: listName } });
+          case "ADD_LOG":
+            console.log("-> Adding Log to:", action.data.processTitle);
+            let proc = await db.process.findUnique({ where: { title: action.data.processTitle } });
+            if (!proc) {
+               proc = await db.process.create({ data: { title: action.data.processTitle, goal: "Created via Log" } });
+            }
+            await db.log.create({
+              data: { content: action.data.content, processId: proc.id }
+            });
+            break;
+
+          case "DELETE_ANCHOR":
+            console.log("-> Deleting Anchor ID:", action.data.id);
+            if (action.data.id) {
+              await db.anchor.delete({
+                where: { id: action.data.id }
+              });
+            }
+            break;
+
+          case "DELETE_PROCESS":
+            console.log("-> Deleting Process ID:", action.data.id);
+            if (action.data.id) {
+              await db.process.delete({
+                where: { id: action.data.id }
+              });
+            }
+            break;
+
+          case "CLEAR_ALL":
+            console.log("-> CLEARING ALL DATA (Except Messages)");
+            await db.log.deleteMany();
+            await db.process.deleteMany();
+            await db.anchor.deleteMany();
+            break;
         }
-        
-        // Add the item
-        await db.listItem.create({
-          data: {
-            content: parsedResult.data.item,
-            listId: list.id
-          }
-        });
-        break;
-
-      case "CHAT":
-      default:
-        // No DB action, just conversation
-        break;
+      }
     }
 
-    // G. Save AI Response to DB
-    await db.message.create({
-      data: {
-        role: 'assistant',
-        content: parsedResult.responseToUser
-      }
-    })
+    // G. Save Assistant Response
+    await db.message.create({ data: { role: 'assistant', content: result.responseToUser } })
 
-    // Refresh the dashboard to show new data
     revalidatePath('/dashboard')
     return { success: true }
 
   } catch (error) {
-    console.error("Smart Brain Error:", error)
-    return { error: 'Failed to process message' }
+    console.error("🔥 ERROR:", error)
+    return { error: 'Failed' }
+  }
+}
+
+// --- 3. GENERATE SCHEDULE ---
+export async function generateSchedule() {
+  try {
+    const anchors = await db.anchor.findMany()
+    const processes = await db.process.findMany()
+
+    const prompt = `
+      System: You are "Jimi", an AI Life OS. 
+      Your task is to build a recommended daily schedule for today.
+      
+      CONSTRAINTS (Fixed Anchors):
+      ${anchors.map(a => `- ${a.title}: ${a.startTime} to ${a.endTime}`).join('\n') || 'None'}
+      
+      GOALS TO FIT IN (Processes):
+      ${processes.map(p => `- ${p.title} (Goal: ${p.goal || 'None'})`).join('\n') || 'None'}
+      
+      INSTRUCTIONS:
+      1. Create a logical, hour-by-hour timeline for the day.
+      2. Strictly respect the fixed Anchor times.
+      3. Fit the Processes in the available free time blocks.
+      4. Output the schedule in a clean Markdown format in Hebrew.
+    `
+
+    const rawOutput = await generateText(prompt)
+    
+    return { schedule: rawOutput }
+  } catch (error) {
+    console.error("🔥 Error generating schedule:", error)
+    return { error: 'Failed to generate schedule' }
   }
 }

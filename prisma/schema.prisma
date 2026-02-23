@@ -7,51 +7,36 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-// --- 1. GOALS ---
-// For long-term targets (e.g., "Run a marathon", "Write a blog")
-model Goal {
-  id          String   @id @default(uuid())
-  title       String
-  description String?  // Optional details
-  isCompleted Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Future: We can add a 'ProgressLog' table here later
-}
+// Process vs Anchor philosophy: Anchors are fixed time constraints, Processes are goals with logs
 
-// --- 2. ANCHORS ---
-// For fixed constraints (e.g., "Work 9-5", "Kids pickup")
 model Anchor {
   id        String   @id @default(uuid())
-  title     String
-  day       String   // e.g., "Sunday", "Monday"
+  title     String   // e.g., "Work"
   startTime String   // e.g., "09:00"
   endTime   String   // e.g., "17:00"
+  day       String   @default("Daily") // e.g., "Daily", "Monday", "Weekday"
   createdAt DateTime @default(now())
 }
 
-// --- 3. LISTS    ---
-// Dynamic lists (e.g., "Groceries", "Ideas")
-model List {
-  id        String     @id @default(uuid())
-  title     String     @unique // e.g., "Groceries"
-  items     ListItem[]
-  createdAt DateTime   @default(now())
-}
-
-model ListItem {
+model Process {
   id        String   @id @default(uuid())
-  content   String   // e.g., "Milk", "Call mom"
-  isChecked Boolean  @default(false)
-  
-  // Relation to List
-  listId    String
-  list      List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  title     String   @unique // e.g., "Diet", "Chess"
+  goal      String?  // e.g., "Hit 70kg"
+  createdAt DateTime @default(now())
+
+  logs      Log[]
 }
 
-// --- 4. CHAT HISTORY ---
-// Single stream, no tracks attached anymore
+model Log {
+  id        String   @id @default(uuid())
+  content   String   // e.g., "Ate an apple"
+  createdAt DateTime @default(now())
+
+  processId  String
+  process   Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+}
+
+// Chat history remains as a single global stream
 model Message {
   id        String   @id @default(uuid())
   role      String   // "user" or "assistant"
