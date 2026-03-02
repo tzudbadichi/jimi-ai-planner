@@ -18,7 +18,7 @@ export function ScheduleButton() {
         setSchedule(result.schedule || "No schedule generated")
       }
       setIsOpen(true)
-    } catch (error) {
+    } catch {
       setSchedule("Failed to generate schedule")
       setIsOpen(true)
     } finally {

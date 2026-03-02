@@ -1,16 +1,16 @@
-'use client'
+"use client"
 
-import { useState } from "react"
+type Log = {
+  id: string
+  content: string
+  createdAt: string | Date
+}
 
-export type ProcessView = {
+type ProcessView = {
   id: string
   title: string
   goal: string | null
-  logs: {
-    id: string
-    content: string
-    createdAt: string
-  }[]
+  logs: Log[]
 }
 
 interface ProcessGridProps {

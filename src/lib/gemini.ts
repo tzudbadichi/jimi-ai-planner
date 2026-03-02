@@ -15,8 +15,9 @@ export async function generateText(prompt: string): Promise<string> {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
-  } catch (error: any) {
-    console.error("Gemini Error:", error.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Gemini Error:", message);
     throw error;
   }
 }
