@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from "react"
 import { generateSchedule } from "@/app/actions"
@@ -12,11 +12,7 @@ export function ScheduleButton() {
     setIsLoading(true)
     try {
       const result = await generateSchedule()
-      if (result.error) {
-        setSchedule(`Error: ${result.error}`)
-      } else {
-        setSchedule(result.schedule || "No schedule generated")
-      }
+      setSchedule(result.schedule || "No schedule generated")
       setIsOpen(true)
     } catch {
       setSchedule("Failed to generate schedule")
@@ -34,7 +30,7 @@ export function ScheduleButton() {
         disabled={isLoading}
         className="px-6 py-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
       >
-        <span>✨</span>
+        <span>Generate</span>
         {isLoading ? "Building..." : "Build Daily Schedule"}
       </button>
 
@@ -44,9 +40,7 @@ export function ScheduleButton() {
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full mx-4 flex flex-col max-h-[85vh]">
             {/* Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                📅 Daily Schedule
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">Daily Schedule</h2>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}

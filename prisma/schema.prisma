@@ -43,3 +43,10 @@ model Message {
   content   String
   createdAt DateTime @default(now())
 }
+
+model DailySchedule {
+  id        String   @id @default(cuid())
+  date      String   @unique
+  content   String
+  updatedAt DateTime @updatedAt
+}

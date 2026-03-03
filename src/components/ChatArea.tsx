@@ -31,7 +31,7 @@ interface ChatAreaProps {
   initialMessages: { id: string; role: string; content: string }[]
 }
 
-export function ChatArea({ initialMessages }: ChatAreaProps) {
+export default function ChatArea({ initialMessages }: ChatAreaProps) {
   const [messages, setMessages] = useState(initialMessages)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)

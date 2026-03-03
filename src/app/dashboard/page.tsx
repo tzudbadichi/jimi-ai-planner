@@ -1,50 +1,39 @@
-import { getChatHistory } from "@/app/actions"
-import { AnchorsSidebar } from "@/components/AnchorsSidebar"
-import { ChatArea } from "@/components/ChatArea"
-import { ProcessGrid } from "@/components/ProcessGrid"
-import { ScheduleButton } from "@/components/ScheduleButton"
 import { db } from "@/lib/db"
+import ChatArea from "@/components/ChatArea"
+import ProcessGrid from "@/components/ProcessGrid"
+import SchedulePanel from "@/components/SchedulePanel"
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const messages = await getChatHistory()
-
-  const processes = await db.process.findMany({
-    include: { logs: { orderBy: { createdAt: "desc" }, take: 3 } },
-    orderBy: { createdAt: "desc" },
+  const processes = await db.process.findMany()
+  const initialMessages = await db.message.findMany({
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, role: true, content: true }
   })
-
-  const anchors = await db.anchor.findMany({
-    orderBy: { startTime: "asc" },
+  
+  const todayStr = new Date().toLocaleDateString('he-IL')
+  const todaySchedule = await db.dailySchedule.findUnique({
+    where: { date: todayStr }
   })
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-gray-100" dir="rtl">
-      <div className="flex h-full w-1/2 flex-col border-l border-gray-300 bg-white">
-        <ChatArea initialMessages={messages} />
-      </div>
-
-      <div className="flex h-full w-1/2 flex-col">
-        <div className="flex h-1/2 gap-4 overflow-y-auto border-b border-gray-300 bg-gray-50 p-4">
-          <div className="w-1/3">
-            <AnchorsSidebar anchors={anchors} />
-          </div>
-          <div className="w-2/3">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      <div className="flex-1 p-6 overflow-y-auto">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <h1 className="text-3xl font-bold text-gray-800">Jimi Dashboard</h1>
+          
+          <SchedulePanel initialSchedule={todaySchedule?.content || null} />
+          
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Active Blocks</h2>
             <ProcessGrid processes={processes} />
           </div>
         </div>
-
-        <div className="flex h-1/2 flex-col overflow-y-auto bg-white p-6">
-          <div className="mb-4 flex items-center justify-between border-b pb-2">
-            <h2 className="text-xl font-bold">Daily Schedule</h2>
-            <ScheduleButton />
-          </div>
-
-          <div id="schedule-display-area" className="prose prose-sm max-w-none flex-1 w-full">
-            <p className="mt-10 text-center italic text-gray-500">
-              Click the button to generate your schedule for today.
-            </p>
-          </div>
-        </div>
+      </div>
+      
+      <div className="w-full md:w-96 bg-white border-l border-gray-200 flex flex-col h-screen shadow-lg">
+        <ChatArea initialMessages={initialMessages} />
       </div>
     </div>
   )

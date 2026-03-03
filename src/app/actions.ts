@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { generateText } from "@/lib/gemini"
 import { db } from "@/lib/db"
@@ -14,7 +14,7 @@ export async function getChatHistory() {
 // --- 2. THE SMART BRAIN (ROUTER) ---
 export async function submitMessage(content: string) {
   try {
-    console.log("🟢 1. USER INPUT:", content);
+    console.log("[1] USER INPUT:", content);
 
     // A. Save User Message
     await db.message.create({ data: { role: 'user', content } })
@@ -69,7 +69,7 @@ export async function submitMessage(content: string) {
 
     // D. Call AI
     const raw = await generateText(prompt);
-    console.log("🟡 2. AI RAW:", raw);
+    console.log("[2] AI RAW:", raw);
 
     // E. Clean JSON
     let cleanJson = raw.replace(/```json|```/g, "").trim();
@@ -78,7 +78,7 @@ export async function submitMessage(content: string) {
     if (firstBrace !== -1 && lastBrace !== -1) cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
 
     const result = JSON.parse(cleanJson);
-    console.log("🔵 3. PARSED ACTIONS:", result.actions ? result.actions.length : 0);
+    console.log("[3] PARSED ACTIONS:", result.actions ? result.actions.length : 0);
 
     // F. Execute Loop
     if (result.actions && Array.isArray(result.actions)) {
@@ -152,39 +152,84 @@ export async function submitMessage(content: string) {
     return { success: true }
 
   } catch (error) {
-    console.error("🔥 ERROR:", error)
+    console.error("ERROR:", error)
     return { error: 'Failed' }
   }
 }
 
 // --- 3. GENERATE SCHEDULE ---
-export async function generateSchedule() {
+export async function generateSchedule(forceRegenerate: boolean = false) {
   try {
+    const todayStr = new Date().toLocaleDateString('he-IL')
+    
+    // If regeneration is not forced, try to fetch today's existing schedule
+    if (!forceRegenerate) {
+      const existing = await db.dailySchedule.findUnique({ where: { date: todayStr } })
+      if (existing) {
+        return { schedule: existing.content }
+      }
+    }
+
     const anchors = await db.anchor.findMany()
     const processes = await db.process.findMany()
 
     const prompt = `
       System: You are "Jimi", an AI Life OS. 
-      Your task is to build a recommended daily schedule for today.
+      Your task is to build a recommended daily schedule for today (${todayStr}).
       
       CONSTRAINTS (Fixed Anchors):
       ${anchors.map(a => `- ${a.title}: ${a.startTime} to ${a.endTime}`).join('\n') || 'None'}
       
-      GOALS TO FIT IN (Processes):
+      GOALS TO FIT IN (Blocks):
       ${processes.map(p => `- ${p.title} (Goal: ${p.goal || 'None'})`).join('\n') || 'None'}
       
       INSTRUCTIONS:
       1. Create a logical, hour-by-hour timeline for the day.
       2. Strictly respect the fixed Anchor times.
-      3. Fit the Processes in the available free time blocks.
+      3. Fit the Blocks in the available free time blocks.
       4. Output the schedule in a clean Markdown format in Hebrew.
     `
 
     const rawOutput = await generateText(prompt)
     
+    // Save or update the daily schedule in the database
+    await db.dailySchedule.upsert({
+      where: { date: todayStr },
+      update: { content: rawOutput },
+      create: { date: todayStr, content: rawOutput }
+    })
+
+    revalidatePath('/dashboard')
     return { schedule: rawOutput }
   } catch (error) {
-    console.error("🔥 Error generating schedule:", error)
-    return { error: 'Failed to generate schedule' }
+    console.error("Error generating schedule:", error)
+    throw new Error("Failed to generate schedule")
+  }
+}
+// --- 4. DIRECT UI ACTIONS ---
+export async function updateProcess(id: string, title: string, goal: string | null) {
+  try {
+    await db.process.update({
+      where: { id },
+      data: { title, goal }
+    })
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating process:", error)
+    throw new Error("Failed to update process")
+  }
+}
+
+export async function deleteProcessById(id: string) {
+  try {
+    await db.process.delete({
+      where: { id }
+    })
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting process:", error)
+    throw new Error("Failed to delete process")
   }
 }
