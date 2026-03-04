@@ -22,6 +22,10 @@ model Process {
   id        String   @id @default(uuid())
   title     String   @unique // e.g., "Diet", "Chess"
   goal      String?  // e.g., "Hit 70kg"
+  type      String   @default("PROCESS")
+  day       String?   // Used when type is ANCHOR
+  startTime String?   // Used when type is ANCHOR
+  endTime   String?   // Used when type is ANCHOR
   createdAt DateTime @default(now())
 
   logs      Log[]

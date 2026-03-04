@@ -67,26 +67,35 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
   }
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-      <div className="flex justify-between items-center mb-4 border-b pb-2">
-        <h2 className="text-xl font-bold text-gray-800">Daily Schedule</h2>
-        <button 
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="px-5 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 text-white">
+        <div className="flex justify-between items-center gap-3">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">לוח זמנים יומי</h2>
+            <p className="text-xs text-blue-100 mt-1">תכנון אוטומטי לפי עוגנים, יעדים ורשימות</p>
+          </div>
+          <button
           onClick={handleRefresh} 
           disabled={loading}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+          className="bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-lg text-sm disabled:opacity-50 transition-colors border border-white/20"
         >
-          {loading ? 'Generating...' : 'Regenerate'}
+          {loading ? 'מייצר...' : 'רענן'}
         </button>
+        </div>
       </div>
+      <div className="p-5">
       {schedule ? (
         parsedTable ? (
-          <div className="rounded-lg border border-gray-200 bg-gray-50/50 overflow-hidden">
-            <div className="max-h-[430px] overflow-auto">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/40 overflow-hidden">
+            <div className="max-h-[460px] overflow-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 bg-gray-100 z-10">
+                <thead className="sticky top-0 bg-slate-100 z-10">
                   <tr>
                     {parsedTable.headers.map((header) => (
-                      <th key={header} className="px-4 py-3 text-left font-semibold text-gray-700 border-b border-gray-200">
+                      <th
+                        key={header}
+                        className="px-4 py-3 text-right font-semibold text-slate-700 border-b border-slate-200 whitespace-nowrap"
+                      >
                         {header}
                       </th>
                     ))}
@@ -94,9 +103,12 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
                 </thead>
                 <tbody className="bg-white">
                   {parsedTable.rows.map((row, rowIndex) => (
-                    <tr key={`${row.join('-')}-${rowIndex}`} className="hover:bg-blue-50/40 transition-colors">
+                    <tr key={`${row.join('-')}-${rowIndex}`} className="hover:bg-blue-50/50 transition-colors">
                       {row.map((cell, cellIndex) => (
-                        <td key={`${cellIndex}-${cell}`} className="px-4 py-3 text-gray-700 border-b border-gray-100 align-top">
+                        <td
+                          key={`${cellIndex}-${cell}`}
+                          className="px-4 py-3 text-slate-700 border-b border-slate-100 align-top text-right"
+                        >
                           {cell || '-'}
                         </td>
                       ))}
@@ -107,13 +119,14 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
             </div>
           </div>
         ) : (
-          <div className="whitespace-pre-wrap text-gray-700 text-sm leading-7 bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[430px] overflow-auto">
+          <div className="whitespace-pre-wrap text-slate-700 text-sm leading-7 bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-[460px] overflow-auto">
             {schedule}
           </div>
         )
       ) : (
-        <div className="text-gray-500 text-sm">No schedule generated for today yet. Click regenerate to build one.</div>
+        <div className="text-slate-500 text-sm">אין עדיין לו&quot;ז להיום. לחץ על רענן כדי לייצר תכנון.</div>
       )}
-    </div>
+      </div>
+    </section>
   )
 }
