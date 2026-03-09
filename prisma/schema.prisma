@@ -3,11 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // Process vs Anchor philosophy: Anchors are fixed time constraints, Processes are goals with logs
+
+model User {
+  id           String          @id @default(uuid())
+  email        String          @unique
+  passwordHash String
+  createdAt    DateTime        @default(now())
+
+  anchors      Anchor[]
+  processes    Process[]
+  logs         Log[]
+  messages     Message[]
+  schedules    dailySchedule[]
+}
 
 model Anchor {
   id        String   @id @default(uuid())
@@ -16,23 +29,32 @@ model Anchor {
   endTime   String   // e.g., "17:00"
   day       String   @default("Daily") // e.g., "Daily", "Monday", "Weekday"
   createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Process {
   id        String   @id @default(uuid())
-  title     String   @unique // e.g., "Diet", "Chess"
+  title     String   // e.g., "Diet", "Chess"
   goal      String?  // e.g., "Hit 70kg"
+  type      String   @default("PROCESS")
   createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   logs      Log[]
+
+  @@unique([userId, title])
 }
 
 model Log {
   id        String   @id @default(uuid())
   content   String   // e.g., "Ate an apple"
   createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  processId  String
+  processId String
   process   Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 }
 
@@ -42,11 +64,18 @@ model Message {
   role      String   // "user" or "assistant"
   content   String
   createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model dailySchedule {
   id        String   @id @default(cuid())
-  date      String   @unique
+  date      String
   content   String
   updatedAt DateTime @updatedAt
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("DailySchedule")
 }

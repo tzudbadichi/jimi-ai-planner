@@ -3,6 +3,7 @@
 import { generateText } from "@/lib/gemini"
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { requireUserId } from "@/lib/auth"
 
 type BlockType = "PROCESS" | "LIST"
 
@@ -178,8 +179,8 @@ function inferListCreationFromInput(content: string): InferredList | null {
   return { title, items }
 }
 
-async function upsertInferredList(list: InferredList): Promise<boolean> {
-  const existing = await db.process.findUnique({ where: { title: list.title } })
+async function upsertInferredList(userId: string, list: InferredList): Promise<boolean> {
+  const existing = await db.process.findUnique({ where: { userId_title: { userId, title: list.title } } })
   const existingItems = parseChecklist(existing?.goal ?? null)
   const existingNormalized = new Set(existingItems.map((item) => normalizeForMatch(item.text)))
   const uniqueItems = list.items
@@ -192,6 +193,7 @@ async function upsertInferredList(list: InferredList): Promise<boolean> {
   if (!existing) {
     await db.process.create({
       data: {
+        userId,
         title: list.title,
         goal: nextGoal,
         type: "LIST"
@@ -203,8 +205,8 @@ async function upsertInferredList(list: InferredList): Promise<boolean> {
   const shouldUpdate = existing.type !== "LIST" || nextGoal !== (existing.goal ?? null)
   if (!shouldUpdate) return false
 
-  await db.process.update({
-    where: { id: existing.id },
+  await db.process.updateMany({
+    where: { id: existing.id, userId },
     data: {
       type: "LIST",
       goal: nextGoal
@@ -243,7 +245,9 @@ function parseRouterResult(raw: string): RouterResult | null {
 
 // --- 1. GET CHAT HISTORY ---
 export async function getChatHistory() {
+  const userId = await requireUserId()
   return await db.message.findMany({
+    where: { userId },
     orderBy: { createdAt: 'asc' }
   })
 }
@@ -251,15 +255,17 @@ export async function getChatHistory() {
 // --- 2. THE SMART BRAIN (ROUTER) ---
 export async function submitMessage(content: string) {
   try {
+    const userId = await requireUserId()
     console.log("[1] USER INPUT:", content);
 
     // A. Save User Message
-    await db.message.create({ data: { role: 'user', content } })
+    await db.message.create({ data: { userId, role: 'user', content } })
 
     // B. Context: Fetch existing Anchors & Processes WITH IDs
-    const anchors = await db.anchor.findMany();
-    const processes = await db.process.findMany();
+    const anchors = await db.anchor.findMany({ where: { userId } });
+    const processes = await db.process.findMany({ where: { userId } });
     const recentMessages = await db.message.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
       take: 10,
       select: { role: true, content: true }
@@ -323,7 +329,7 @@ export async function submitMessage(content: string) {
       console.error("[2] MODEL ERROR:", modelError)
       const serviceBusyMessage =
         "שירות ה-AI כרגע בעומס זמני. ההודעה שלך נשמרה, ואפשר לנסות שוב בעוד כמה שניות."
-      await db.message.create({ data: { role: "assistant", content: serviceBusyMessage } })
+      await db.message.create({ data: { userId, role: "assistant", content: serviceBusyMessage } })
       revalidatePath('/dashboard')
       return { success: true, degraded: true }
     }
@@ -335,12 +341,15 @@ export async function submitMessage(content: string) {
     if (!result) {
       let createdFallback = false
       if (inferredList) {
-        createdFallback = await upsertInferredList(inferredList)
+        createdFallback = await upsertInferredList(userId, inferredList)
       } else if (inferredProcess) {
-        const existingProc = await db.process.findUnique({ where: { title: inferredProcess.title } })
+        const existingProc = await db.process.findUnique({
+          where: { userId_title: { userId, title: inferredProcess.title } },
+        })
         if (!existingProc) {
           await db.process.create({
             data: {
+              userId,
               title: inferredProcess.title,
               goal: inferredProcess.goal,
               type: inferredProcess.blockType
@@ -359,7 +368,7 @@ export async function submitMessage(content: string) {
               ? `יצרתי בלוק חדש: ${inferredProcess.title}`
               : "קיבלתי. עדכנתי את מה שהיה אפשר לבצע."
           : "לא הצלחתי לנתח את הבקשה לפעולות, אבל אני כאן להמשך.")
-      await db.message.create({ data: { role: "assistant", content: fallbackResponse } })
+      await db.message.create({ data: { userId, role: "assistant", content: fallbackResponse } })
       revalidatePath('/dashboard')
       return { success: true }
     }
@@ -376,6 +385,7 @@ export async function submitMessage(content: string) {
             console.log("-> Creating Anchor:", data.title);
             await db.anchor.create({
               data: {
+                userId,
                 title: data.title.trim(),
                 startTime: data.startTime || "00:00",
                 endTime: data.endTime || "00:00",
@@ -391,6 +401,7 @@ export async function submitMessage(content: string) {
             if (normalized.blockType === "ANCHOR") {
               await db.anchor.create({
                 data: {
+                  userId,
                   title: normalized.title,
                   startTime: data.startTime || "00:00",
                   endTime: data.endTime || "00:00",
@@ -399,11 +410,14 @@ export async function submitMessage(content: string) {
               })
               break
             }
-            const existingProc = await db.process.findUnique({ where: { title: normalized.title } });
+            const existingProc = await db.process.findUnique({
+              where: { userId_title: { userId, title: normalized.title } },
+            });
             if (!existingProc) {
               const blockType: BlockType = normalized.blockType === "LIST" ? "LIST" : "PROCESS"
               await db.process.create({
                 data: {
+                  userId,
                   title: normalized.title,
                   goal: data.goal || null,
                   type: blockType
@@ -422,7 +436,7 @@ export async function submitMessage(content: string) {
             if (itemsToAdd.length === 0) break
 
             const listProcesses = await db.process.findMany({
-              where: { type: "LIST" }
+              where: { userId, type: "LIST" }
             })
             if (listProcesses.length === 0) break
 
@@ -459,15 +473,18 @@ export async function submitMessage(content: string) {
           case "ADD_LOG":
             if (!data.processTitle?.trim() || !data.content?.trim()) break
             console.log("-> Adding Log to:", data.processTitle);
-            const proc = await db.process.upsert({
-              where: { title: data.processTitle },
-              update: {},
-              create: { title: data.processTitle, goal: "Created via Log", type: "PROCESS" }
-            });
+            const existingProcForLog = await db.process.findUnique({
+              where: { userId_title: { userId, title: data.processTitle } },
+            })
+            const proc =
+              existingProcForLog ??
+              (await db.process.create({
+                data: { userId, title: data.processTitle, goal: "Created via Log", type: "PROCESS" }
+              }))
 
             if (data.content.trim()) {
               await db.log.create({
-                data: { content: data.content, processId: proc.id }
+                data: { userId, content: data.content, processId: proc.id }
               });
             }
             break;
@@ -476,7 +493,7 @@ export async function submitMessage(content: string) {
             console.log("-> Deleting Anchor ID:", data.id);
             if (data.id) {
               await db.anchor.deleteMany({
-                where: { id: data.id }
+                where: { id: data.id, userId }
               });
             }
             break;
@@ -485,16 +502,18 @@ export async function submitMessage(content: string) {
             console.log("-> Deleting Process ID:", data.id);
             if (data.id) {
               await db.process.deleteMany({
-                where: { id: data.id }
+                where: { id: data.id, userId }
               });
             }
             break;
 
           case "CLEAR_ALL":
             console.log("-> CLEARING ALL DATA (Except Messages)");
-            await db.log.deleteMany();
-            await db.process.deleteMany();
-            await db.anchor.deleteMany();
+            await db.log.deleteMany({ where: { userId } });
+            await db.dailySchedule.deleteMany({ where: { userId } });
+            await db.process.deleteMany({ where: { userId } });
+            await db.anchor.deleteMany({ where: { userId } });
+            await db.message.deleteMany({ where: { userId } });
             break;
         }
       }
@@ -502,12 +521,15 @@ export async function submitMessage(content: string) {
 
     if (!result.actions || result.actions.length === 0) {
       if (inferredList) {
-        await upsertInferredList(inferredList)
+        await upsertInferredList(userId, inferredList)
       } else if (inferredProcess) {
-        const existingProc = await db.process.findUnique({ where: { title: inferredProcess.title } })
+        const existingProc = await db.process.findUnique({
+          where: { userId_title: { userId, title: inferredProcess.title } },
+        })
         if (!existingProc) {
           await db.process.create({
             data: {
+              userId,
               title: inferredProcess.title,
               goal: inferredProcess.goal,
               type: inferredProcess.blockType
@@ -518,7 +540,7 @@ export async function submitMessage(content: string) {
     }
 
     // G. Save Assistant Response
-    await db.message.create({ data: { role: 'assistant', content: result.responseToUser } })
+    await db.message.create({ data: { userId, role: 'assistant', content: result.responseToUser } })
 
     revalidatePath('/dashboard')
     return { success: true }
@@ -533,18 +555,21 @@ export async function submitMessage(content: string) {
 // --- 3. GENERATE SCHEDULE ---
 export async function generateSchedule(forceRegenerate: boolean = false) {
   try {
+    const userId = await requireUserId()
     const todayStr = new Date().toLocaleDateString('he-IL')
     
     // If regeneration is not forced, try to fetch today's existing schedule
     if (!forceRegenerate) {
-      const existing = await db.dailySchedule.findUnique({ where: { date: todayStr } })
+      const existing = await db.dailySchedule.findUnique({
+        where: { userId_date: { userId, date: todayStr } }
+      })
       if (existing) {
         return { schedule: existing.content }
       }
     }
 
-    const anchors = await db.anchor.findMany()
-    const processes = await db.process.findMany()
+    const anchors = await db.anchor.findMany({ where: { userId } })
+    const processes = await db.process.findMany({ where: { userId } })
     const goalBlocks = processes.filter((p) => p.type === "PROCESS")
     const listBlocks = processes.filter((p) => p.type === "LIST")
 
@@ -572,9 +597,9 @@ export async function generateSchedule(forceRegenerate: boolean = false) {
     
     // Save or update the daily schedule in the database
     await db.dailySchedule.upsert({
-      where: { date: todayStr },
+      where: { userId_date: { userId, date: todayStr } },
       update: { content: rawOutput },
-      create: { date: todayStr, content: rawOutput }
+      create: { userId, date: todayStr, content: rawOutput }
     })
 
     revalidatePath('/dashboard')
@@ -592,14 +617,14 @@ export async function updateProcess(
   type: BlockType,
 ) {
   try {
-    const updatedProcess = await db.process.update({
-      where: { id },
-      data: {
-        title,
-        goal,
-        type
-      }
+    const userId = await requireUserId()
+    const updated = await db.process.updateMany({
+      where: { id, userId },
+      data: { title, goal, type }
     })
+    if (updated.count === 0) throw new Error('Process not found')
+
+    const updatedProcess = await db.process.findUnique({ where: { id } })
     revalidatePath('/dashboard')
     return { success: true, process: updatedProcess }
   } catch (error) {
@@ -610,13 +635,20 @@ export async function updateProcess(
 
 export async function addProcessLog(processId: string, content: string) {
   try {
+    const userId = await requireUserId()
     const trimmed = content.trim()
     if (!trimmed) {
       throw new Error("Log content is empty")
     }
 
+    const process = await db.process.findFirst({
+      where: { id: processId, userId },
+      select: { id: true }
+    })
+    if (!process) throw new Error('Process not found')
+
     const log = await db.log.create({
-      data: { processId, content: trimmed }
+      data: { userId, processId, content: trimmed }
     })
 
     revalidatePath('/dashboard')
@@ -636,9 +668,8 @@ export async function addProcessLog(processId: string, content: string) {
 
 export async function deleteProcessLog(logId: string) {
   try {
-    await db.log.delete({
-      where: { id: logId }
-    })
+    const userId = await requireUserId()
+    await db.log.deleteMany({ where: { id: logId, userId } })
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
@@ -649,13 +680,31 @@ export async function deleteProcessLog(logId: string) {
 
 export async function deleteProcessById(id: string) {
   try {
-    await db.process.delete({
-      where: { id }
-    })
+    const userId = await requireUserId()
+    await db.process.deleteMany({ where: { id, userId } })
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
     console.error("Error deleting process:", error)
     throw new Error("Failed to delete process")
+  }
+}
+
+export async function resetAllData() {
+  try {
+    const userId = await requireUserId()
+    await db.$transaction([
+      db.log.deleteMany({ where: { userId } }),
+      db.dailySchedule.deleteMany({ where: { userId } }),
+      db.anchor.deleteMany({ where: { userId } }),
+      db.process.deleteMany({ where: { userId } }),
+      db.message.deleteMany({ where: { userId } }),
+    ])
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error resetting all data:', error)
+    throw new Error('Failed to reset all data')
   }
 }

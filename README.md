@@ -1,84 +1,141 @@
-# Jimi - Personal AI Assistant & Automation Hub
+# Jimi AI Planner
 
-Jimi is a personal dashboard and automation center designed to manage daily tasks, monitor background processes, and visualize system health. It combines a chat interface for natural language interaction with a structured dashboard for tracking anchors (habits/events) and automated scripts.
-
-## 🚀 Key Features
-
-* **Smart Dashboard:** A split-screen layout featuring:
-    * **Chat Interface:** Real-time communication with the AI assistant.
-    * **Process Monitor:** Visual grid of automation scripts (Python/Node.js) with status indicators (Success/Failure/Running).
-    * **Anchors & Habits:** Tracking of daily routines and time-based events.
-    * **Schedule Builder:** Dynamic daily planning area.
-
-* **Automation Engine:**
-    * Executes scripts and logs their output to a PostgreSQL database.
-    * Tracks execution time, status, and error logs.
-    * Provides visual feedback on process health (green/red indicators).
-
-* **Tech Stack:**
-    * **Frontend:** Next.js 14+ (App Router), Tailwind CSS, Lucide React (Icons).
-    * **Backend:** Server Actions, Prisma ORM.
-    * **Database:** PostgreSQL (via Neon/Supabase or local).
-    * **AI Integration:** (Planned) Google Gemini / OpenAI API for context-aware responses.
-
-## 📂 Project Structure
-
-├── src/
-│   ├── app/                # Next.js App Router pages
-│   │   ├── dashboard/      # Main dashboard view
-│   │   ├── actions.ts      # Server Actions (DB operations)
-│   ├── components/         # React UI components
-│   │   ├── ChatArea.tsx    # Chat interface logic
-│   │   ├── ProcessGrid.tsx # Automation status cards
-│   │   ├── AnchorsSidebar.tsx # Daily habits tracking
-│   ├── lib/
-│   │   ├── db.ts           # Prisma client instance
-│   │   ├── utils.ts        # Helper functions
-├── prisma/
-│   ├── schema.prisma       # Database schema definition
-├── public/                 # Static assets
-
-
-## 🛠️ Setup & Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/your-username/jimi.git](https://github.com/your-username/jimi.git)
-    cd jimi
-    ```
-
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
-
-3.  **Environment Variables:**
-    Create a `.env` file in the root directory and add your database connection string:
-    ```env
-    DATABASE_URL="postgresql://user:password@localhost:5432/jimi_db"
-    ```
-
-4.  **Database Migration:**
-    ```bash
-    npx prisma generate
-    npx prisma db push
-    ```
-
-5.  **Run Development Server:**
-    ```bash
-    npm run dev
-    ```
-
-## 📌 Roadmap & TODO
-
-* [ ] **Interactive Process Logs:** Click on a process card to view detailed logs and history graphs.
-* [ ] **Schedule Builder Logic:** Implement the AI logic to generate a daily schedule based on tasks and anchors.
-* [ ] **Mobile Responsiveness:** Optimize the layout for phone screens.
-* [ ] **Voice Command:** Integration for voice-to-text input.
-
-## 🤝 Contributing
-
-This is a personal project, but suggestions and improvements are welcome!
+Jimi is a multi-user AI planning dashboard built for day-to-day execution:
+- AI chat for natural-language planning
+- smart daily schedule generation
+- anchors (fixed time blocks)
+- goals and checklists
+- per-user private workspace (auth + scoped data)
 
 ---
-*Built with ❤️ by Zvi Yehuda & Gemini*
+
+## What You Get
+
+- **Structured dashboard flow**
+  - Top: daily schedule + chat
+  - Middle: collapsible anchors + goals
+  - Bottom: actionable checklists
+- **AI-assisted planning**
+  - Uses Gemini to translate user intent into concrete actions
+  - Generates a daily schedule based on anchors, goals, and lists
+- **Multi-user isolation**
+  - Email/password login
+  - Cookie session (HTTP-only, signed)
+  - All data scoped by `userId`
+- **One-click cleanup**
+  - `Reset All` clears the current user's data only
+
+---
+
+## Tech Stack
+
+- **Frontend:** Next.js App Router, React, Tailwind CSS
+- **Backend:** Next.js Server Actions
+- **ORM:** Prisma
+- **Database:** PostgreSQL (Neon/Supabase-compatible)
+- **AI:** Google Generative AI SDK (Gemini)
+
+---
+
+## Project Structure
+
+```text
+src/
+  app/
+    actions.ts              # Core server actions and AI router
+    dashboard/page.tsx      # Main authenticated dashboard
+    login/                  # Sign in / sign up pages + actions
+  components/
+    ChatArea.tsx
+    SchedulePanel.tsx
+    ProcessGrid.tsx
+    AnchorsSidebar.tsx
+    GoalsSidebar.tsx
+    ResetAllButton.tsx
+  lib/
+    auth.ts                 # Session + current user utilities
+    db.ts                   # Prisma client
+prisma/
+  schema.prisma
+DEPLOYMENT.md              # Production deployment runbook
+```
+
+---
+
+## Local Development
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Environment variables
+
+Create `.env` from `.env.example` and fill:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require"
+AUTH_SECRET="replace-with-long-random-secret"
+GOOGLE_API_KEY="replace-with-gemini-api-key"
+```
+
+### 3. Prepare database
+
+```bash
+npm run db:generate
+npm run db:push
+```
+
+### 4. Run app
+
+```bash
+npm run dev
+```
+
+Open: `http://localhost:3000`
+
+---
+
+## NPM Scripts
+
+- `npm run dev` - start development server
+- `npm run build` - production build
+- `npm run start` - run production server
+- `npm run lint` - run ESLint
+- `npm run db:generate` - Prisma client generation
+- `npm run db:push` - push schema to database
+- `npm run db:studio` - open Prisma Studio
+
+---
+
+## Auth & Security Notes
+
+- Login is email/password based.
+- Session cookie is signed and HTTP-only.
+- In production, `AUTH_SECRET` is mandatory.
+- Data operations are scoped to the authenticated user.
+
+---
+
+## Deployment
+
+Follow the full production steps in:
+
+- [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+Includes:
+- Vercel setup
+- environment variable setup
+- Prisma schema push
+- domain connection checklist
+
+---
+
+## Current Status
+
+This repository reflects the **first deployed production baseline** of Jimi with:
+- working multi-user auth
+- PostgreSQL backend
+- AI schedule/chat workflow
+- deployed and verified build pipeline

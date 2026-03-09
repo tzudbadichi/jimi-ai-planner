@@ -4,12 +4,18 @@ import ProcessGrid from "@/components/ProcessGrid"
 import SchedulePanel from "@/components/SchedulePanel"
 import { AnchorsSidebar } from "@/components/AnchorsSidebar"
 import { GoalsSidebar } from "@/components/GoalsSidebar"
+import ResetAllButton from "@/components/ResetAllButton"
+import SignOutButton from "@/components/SignOutButton"
+import { requireUser } from "@/lib/auth"
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
+  const user = await requireUser()
+
   const processes = await db.process.findMany({
     where: {
+      userId: user.id,
       NOT: { type: 'ANCHOR' }
     },
     include: {
@@ -19,34 +25,23 @@ export default async function DashboardPage() {
     }
   })
   const initialMessages = await db.message.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: 'asc' },
     select: { id: true, role: true, content: true }
   })
   
   const todayStr = new Date().toLocaleDateString('he-IL')
   const todaySchedule = await db.dailySchedule.findUnique({
-    where: { date: todayStr }
+    where: { userId_date: { userId: user.id, date: todayStr } }
   })
   const anchors = await db.anchor.findMany({
+    where: { userId: user.id },
     orderBy: [
       { day: 'asc' },
       { startTime: 'asc' }
     ]
   })
-  const legacyAnchorBlocks = await db.process.findMany({
-    where: { type: 'ANCHOR' },
-    orderBy: { title: 'asc' }
-  })
-  const mergedAnchors = [
-    ...anchors,
-    ...legacyAnchorBlocks.map((item) => ({
-      id: `legacy-${item.id}`,
-      title: item.title,
-      startTime: item.startTime || '00:00',
-      endTime: item.endTime || '00:00',
-      day: item.day || 'Daily'
-    }))
-  ]
+  const mergedAnchors = anchors
   const goalBlocks = processes
     .filter((process) => process.type === 'PROCESS')
     .map((process) => ({
@@ -60,7 +55,16 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-6">
-          <h1 className="text-3xl font-bold text-gray-800">Jimi Dashboard</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Jimi Dashboard</h1>
+              <p className="mt-1 text-sm text-gray-500">{user.email}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <ResetAllButton />
+              <SignOutButton />
+            </div>
+          </div>
 
           <div>
             <SchedulePanel initialSchedule={todaySchedule?.content || null} />
