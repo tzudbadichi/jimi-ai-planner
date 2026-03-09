@@ -2,10 +2,16 @@
 
 import { useState } from 'react'
 import { generateSchedule } from '@/app/actions'
+import { CalendarClock, RefreshCw, Sparkles } from 'lucide-react'
 
 type ParsedTable = {
   headers: string[]
   rows: string[][]
+}
+
+type ParsedTimelineItem = {
+  time: string
+  task: string
 }
 
 function parseRow(line: string): string[] {
@@ -22,7 +28,10 @@ function isMarkdownSeparator(line: string): boolean {
 }
 
 function parseMarkdownTable(content: string): ParsedTable | null {
-  const lines = content.split('\n').map((line) => line.trim()).filter(Boolean)
+  const lines = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
 
   for (let i = 0; i < lines.length - 1; i++) {
     if (!lines[i].includes('|') || !isMarkdownSeparator(lines[i + 1])) continue
@@ -47,10 +56,31 @@ function parseMarkdownTable(content: string): ParsedTable | null {
   return null
 }
 
+function looksLikeTimeRange(value: string) {
+  return /^(\d{1,2}:\d{2})(\s*-\s*\d{1,2}:\d{2})?$/.test(value.trim())
+}
+
+function parseTimeline(content: string): ParsedTimelineItem[] {
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .map((line) => {
+      const match = line.match(/^\*\*(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?)\*\*:\s*(.+)$/)
+      if (!match) return null
+      return {
+        time: match[1].trim(),
+        task: match[2].trim(),
+      }
+    })
+    .filter((item): item is ParsedTimelineItem => Boolean(item))
+}
+
 export default function SchedulePanel({ initialSchedule }: { initialSchedule: string | null }) {
   const [schedule, setSchedule] = useState(initialSchedule)
   const [loading, setLoading] = useState(false)
   const parsedTable = schedule ? parseMarkdownTable(schedule) : null
+  const parsedTimeline = schedule ? parseTimeline(schedule) : []
+  const tasksCount = parsedTable ? parsedTable.rows.length : parsedTimeline.length
 
   const handleRefresh = async () => {
     setLoading(true)
@@ -60,72 +90,112 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
         setSchedule(result.schedule)
       }
     } catch (error) {
-      console.error("Failed to refresh schedule:", error)
+      console.error('Failed to refresh schedule:', error)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="px-5 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 text-white">
-        <div className="flex justify-between items-center gap-3">
+    <section className="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm">
+      <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-cyan-900 px-5 py-5 text-white">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold tracking-tight">לוח זמנים יומי</h2>
-            <p className="text-xs text-blue-100 mt-1">תכנון אוטומטי לפי עוגנים, יעדים ורשימות</p>
+            <div className="mb-1 flex items-center gap-2 text-cyan-100">
+              <CalendarClock className="h-4 w-4" />
+              <span className="text-xs font-medium">לו״ז יומי חכם</span>
+            </div>
+            <h2 className="text-xl font-bold tracking-tight">תכנון היום</h2>
+            <p className="mt-1 text-xs text-blue-100">בנוי אוטומטית לפי עוגנים, יעדים ורשימות</p>
           </div>
           <button
-          onClick={handleRefresh} 
-          disabled={loading}
-          className="bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-lg text-sm disabled:opacity-50 transition-colors border border-white/20"
-        >
-          {loading ? 'מייצר...' : 'רענן'}
-        </button>
+            onClick={handleRefresh}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-2 text-sm text-white transition-colors hover:bg-white/25 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'מייצר...' : 'רענן'}
+          </button>
         </div>
+
+        {parsedTable && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-full border border-cyan-200/30 bg-cyan-200/10 px-2.5 py-1 text-cyan-100">
+              <Sparkles className="h-3.5 w-3.5" />
+              {tasksCount} משימות מתוזמנות
+            </span>
+            <span className="rounded-full border border-blue-200/30 bg-blue-200/10 px-2.5 py-1 text-blue-100">עודכן היום</span>
+          </div>
+        )}
       </div>
-      <div className="p-5">
-      {schedule ? (
-        parsedTable ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/40 overflow-hidden">
-            <div className="max-h-[460px] overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="sticky top-0 bg-slate-100 z-10">
-                  <tr>
-                    {parsedTable.headers.map((header) => (
-                      <th
-                        key={header}
-                        className="px-4 py-3 text-right font-semibold text-slate-700 border-b border-slate-200 whitespace-nowrap"
-                      >
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {parsedTable.rows.map((row, rowIndex) => (
-                    <tr key={`${row.join('-')}-${rowIndex}`} className="hover:bg-blue-50/50 transition-colors">
-                      {row.map((cell, cellIndex) => (
-                        <td
-                          key={`${cellIndex}-${cell}`}
-                          className="px-4 py-3 text-slate-700 border-b border-slate-100 align-top text-right"
+
+      <div className="bg-gradient-to-b from-white to-slate-50/40 p-5">
+        {schedule ? (
+          parsedTable ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="max-h-[460px] overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
+                    <tr>
+                      {parsedTable.headers.map((header) => (
+                        <th
+                          key={header}
+                          className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600"
                         >
-                          {cell || '-'}
-                        </td>
+                          {header}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white">
+                    {parsedTable.rows.map((row, rowIndex) => (
+                      <tr
+                        key={`${row.join('-')}-${rowIndex}`}
+                        className="border-b border-slate-100 transition-colors odd:bg-white even:bg-slate-50/35 hover:bg-cyan-50/55"
+                      >
+                        {row.map((cell, cellIndex) => (
+                          <td key={`${cellIndex}-${cell}`} className="px-4 py-3 align-top text-right text-slate-700">
+                            {cellIndex === 0 && looksLikeTimeRange(cell) ? (
+                              <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
+                                {cell}
+                              </span>
+                            ) : (
+                              cell || '-'
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          ) : parsedTimeline.length > 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="space-y-3">
+                {parsedTimeline.map((item, index) => (
+                  <div key={`${item.time}-${index}`} className="relative flex gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 transition-colors hover:bg-cyan-50/45">
+                    <div className="flex flex-col items-center">
+                      <span className="inline-flex min-w-[6.5rem] justify-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
+                        {item.time}
+                      </span>
+                      {index < parsedTimeline.length - 1 && <span className="mt-2 h-6 w-px bg-slate-200" />}
+                    </div>
+                    <p className="pt-0.5 text-sm leading-6 text-slate-700">{item.task}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="max-h-[460px] overflow-auto rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+              <pre className="whitespace-pre-wrap font-sans">{schedule}</pre>
+            </div>
+          )
         ) : (
-          <div className="whitespace-pre-wrap text-slate-700 text-sm leading-7 bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-[460px] overflow-auto">
-            {schedule}
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+            אין עדיין לו״ז להיום. לחץ על רענן כדי לייצר תכנון.
           </div>
-        )
-      ) : (
-        <div className="text-slate-500 text-sm">אין עדיין לו&quot;ז להיום. לחץ על רענן כדי לייצר תכנון.</div>
-      )}
+        )}
       </div>
     </section>
   )

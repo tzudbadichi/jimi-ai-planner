@@ -19,6 +19,7 @@ interface Process {
 
 interface ProcessGridProps {
   processes: Process[]
+  mode?: 'all' | 'listsOnly'
 }
 
 type BlockType = 'PROCESS' | 'LIST'
@@ -71,7 +72,7 @@ const parseChecklist = (goal: string | null): ChecklistItem[] => {
 const serializeChecklist = (items: ChecklistItem[]) =>
   items.map((item) => `[${item.checked ? 'x' : ' '}] ${item.text}`).join('\n')
 
-export default function ProcessGrid({ processes }: ProcessGridProps) {
+export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProps) {
   const [items, setItems] = useState(processes)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -99,6 +100,7 @@ export default function ProcessGrid({ processes }: ProcessGridProps) {
 
   const processBlocks = useMemo(() => items.filter((p) => normalizeType(p.type) === 'PROCESS'), [items])
   const listBlocks = useMemo(() => items.filter((p) => normalizeType(p.type) === 'LIST'), [items])
+  const showProcesses = mode === 'all'
 
   const startEditing = (process: Process) => {
     setEditingId(process.id)
@@ -207,7 +209,8 @@ export default function ProcessGrid({ processes }: ProcessGridProps) {
   return (
     <>
       <div className="space-y-8">
-        <section>
+        {showProcesses && (
+          <section>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-800">יעדים</h3>
             <span className="text-xs text-gray-500">{processBlocks.length}</span>
@@ -305,7 +308,8 @@ export default function ProcessGrid({ processes }: ProcessGridProps) {
               })}
             </div>
           )}
-        </section>
+          </section>
+        )}
 
         <section>
           <div className="flex items-center justify-between mb-3">

@@ -45,6 +45,11 @@ type InferredProcess = {
   blockType: BlockType
 }
 
+type InferredList = {
+  title: string
+  items: string[]
+}
+
 type ChecklistItem = {
   text: string
   checked: boolean
@@ -131,6 +136,81 @@ function inferProcessCreationFromInput(content: string): InferredProcess | null 
   }
 
   return null
+}
+
+function inferListCreationFromInput(content: string): InferredList | null {
+  const trimmed = content.trim()
+  if (!trimmed) return null
+
+  const mentionsList = /(?:רשימ(?:ת|ה)|\blist\b)/i.test(trimmed)
+  const mentionsCreate = /(?:צור|תיצור|תיצרי|תוסיף|תוסיפי|create|add|make)/i.test(trimmed)
+  if (!mentionsList || !mentionsCreate) return null
+
+  const isShopping = /(?:קניות|shopping)/i.test(trimmed)
+  const isMediterranean = /(?:ים[\s-]?תיכונ)/i.test(trimmed)
+  const isVegan = /(?:טבעונ|vegan)/i.test(trimmed)
+
+  let title = isShopping ? "רשימת קניות" : "רשימה חדשה"
+  if (isMediterranean) title += " ים תיכונית"
+  if (isVegan) title += " טבעונית"
+
+  const items: string[] = []
+  const itemsMatch = trimmed.match(/(?:כמו|כולל|include(?:s)?|items?\s*:)\s*(.+)$/i)
+  if (itemsMatch?.[1]) {
+    items.push(...splitItemsFromText(itemsMatch[1]))
+  }
+
+  if (items.length === 0 && isMediterranean && isVegan) {
+    items.push(
+      "שמן זית",
+      "עגבניות",
+      "מלפפונים",
+      "חומוס",
+      "עדשים",
+      "קינואה",
+      "לחם מחיטה מלאה",
+      "שקדים",
+      "טחינה",
+      "עשבי תיבול טריים"
+    )
+  }
+
+  return { title, items }
+}
+
+async function upsertInferredList(list: InferredList): Promise<boolean> {
+  const existing = await db.process.findUnique({ where: { title: list.title } })
+  const existingItems = parseChecklist(existing?.goal ?? null)
+  const existingNormalized = new Set(existingItems.map((item) => normalizeForMatch(item.text)))
+  const uniqueItems = list.items
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => !existingNormalized.has(normalizeForMatch(item)))
+    .map((text) => ({ text, checked: false }))
+  const nextGoal = serializeChecklist([...existingItems, ...uniqueItems]) || null
+
+  if (!existing) {
+    await db.process.create({
+      data: {
+        title: list.title,
+        goal: nextGoal,
+        type: "LIST"
+      }
+    })
+    return true
+  }
+
+  const shouldUpdate = existing.type !== "LIST" || nextGoal !== (existing.goal ?? null)
+  if (!shouldUpdate) return false
+
+  await db.process.update({
+    where: { id: existing.id },
+    data: {
+      type: "LIST",
+      goal: nextGoal
+    }
+  })
+  return true
 }
 
 function parseRouterResult(raw: string): RouterResult | null {
@@ -250,9 +330,13 @@ export async function submitMessage(content: string) {
     console.log("[2] AI RAW:", raw);
 
     const inferredProcess = inferProcessCreationFromInput(content)
+    const inferredList = inferListCreationFromInput(content)
     const result = parseRouterResult(raw);
     if (!result) {
-      if (inferredProcess) {
+      let createdFallback = false
+      if (inferredList) {
+        createdFallback = await upsertInferredList(inferredList)
+      } else if (inferredProcess) {
         const existingProc = await db.process.findUnique({ where: { title: inferredProcess.title } })
         if (!existingProc) {
           await db.process.create({
@@ -262,13 +346,18 @@ export async function submitMessage(content: string) {
               type: inferredProcess.blockType
             }
           })
+          createdFallback = true
         }
       }
 
       const fallbackResponse =
         raw.trim() ||
-        (inferredProcess
-          ? `יצרתי בלוק חדש: ${inferredProcess.title}`
+        (createdFallback
+          ? inferredList
+            ? `יצרתי רשימה חדשה: ${inferredList.title}`
+            : inferredProcess
+              ? `יצרתי בלוק חדש: ${inferredProcess.title}`
+              : "קיבלתי. עדכנתי את מה שהיה אפשר לבצע."
           : "לא הצלחתי לנתח את הבקשה לפעולות, אבל אני כאן להמשך.")
       await db.message.create({ data: { role: "assistant", content: fallbackResponse } })
       revalidatePath('/dashboard')
@@ -411,16 +500,20 @@ export async function submitMessage(content: string) {
       }
     }
 
-    if ((!result.actions || result.actions.length === 0) && inferredProcess) {
-      const existingProc = await db.process.findUnique({ where: { title: inferredProcess.title } })
-      if (!existingProc) {
-        await db.process.create({
-          data: {
-            title: inferredProcess.title,
-            goal: inferredProcess.goal,
-            type: inferredProcess.blockType
-          }
-        })
+    if (!result.actions || result.actions.length === 0) {
+      if (inferredList) {
+        await upsertInferredList(inferredList)
+      } else if (inferredProcess) {
+        const existingProc = await db.process.findUnique({ where: { title: inferredProcess.title } })
+        if (!existingProc) {
+          await db.process.create({
+            data: {
+              title: inferredProcess.title,
+              goal: inferredProcess.goal,
+              type: inferredProcess.blockType
+            }
+          })
+        }
       }
     }
 

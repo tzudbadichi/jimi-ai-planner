@@ -3,6 +3,7 @@ import ChatArea from "@/components/ChatArea"
 import ProcessGrid from "@/components/ProcessGrid"
 import SchedulePanel from "@/components/SchedulePanel"
 import { AnchorsSidebar } from "@/components/AnchorsSidebar"
+import { GoalsSidebar } from "@/components/GoalsSidebar"
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,14 @@ export default async function DashboardPage() {
       day: item.day || 'Daily'
     }))
   ]
+  const goalBlocks = processes
+    .filter((process) => process.type === 'PROCESS')
+    .map((process) => ({
+      id: process.id,
+      title: process.title,
+      goal: process.goal,
+      logsCount: process.logs.length
+    }))
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -53,16 +62,18 @@ export default async function DashboardPage() {
         <div className="max-w-6xl mx-auto space-y-6">
           <h1 className="text-3xl font-bold text-gray-800">Jimi Dashboard</h1>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-            <div className="xl:col-span-2">
-              <SchedulePanel initialSchedule={todaySchedule?.content || null} />
-            </div>
+          <div>
+            <SchedulePanel initialSchedule={todaySchedule?.content || null} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <AnchorsSidebar anchors={mergedAnchors} />
+            <GoalsSidebar goals={goalBlocks} />
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Active Blocks</h2>
-            <ProcessGrid processes={processes} />
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">רשימות</h2>
+            <ProcessGrid processes={processes} mode="listsOnly" />
           </div>
         </div>
       </div>

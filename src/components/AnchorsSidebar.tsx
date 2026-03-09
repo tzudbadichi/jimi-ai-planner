@@ -23,7 +23,7 @@ export function AnchorsSidebar({ anchors }: AnchorsSidebarProps) {
   }, [anchors])
 
   return (
-    <aside className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 sticky top-4">
+    <aside className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold text-gray-900">עוגנים קבועים</h2>
