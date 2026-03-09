@@ -61,11 +61,17 @@ function looksLikeTimeRange(value: string) {
 }
 
 function parseTimeline(content: string): ParsedTimelineItem[] {
+  const patterns = [
+    /^\*\*(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?)\*\*:\s*(.+)$/u,
+    /^[-*]\s*(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?)\s*[:\-]\s*(.+)$/u,
+    /^(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?)\s*[:\-]\s*(.+)$/u,
+  ]
+
   return content
     .split('\n')
     .map((line) => line.trim())
     .map((line) => {
-      const match = line.match(/^\*\*(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?)\*\*:\s*(.+)$/)
+      const match = patterns.map((pattern) => line.match(pattern)).find(Boolean)
       if (!match) return null
       return {
         time: match[1].trim(),
@@ -118,7 +124,7 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
           </button>
         </div>
 
-        {parsedTable && (
+        {(parsedTable || parsedTimeline.length > 0) && (
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 rounded-full border border-cyan-200/30 bg-cyan-200/10 px-2.5 py-1 text-cyan-100">
               <Sparkles className="h-3.5 w-3.5" />

@@ -8,6 +8,8 @@
 Set these in Vercel Project Settings -> Environment Variables:
 - `DATABASE_URL`
 - `AUTH_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_API_KEY`
 
 Generate a strong auth secret:
@@ -31,7 +33,7 @@ npm run db:push
 
 ## 5. Verify production
 1. Open `/login`.
-2. Create a user.
+2. Sign in with Google.
 3. Verify that dashboard data is private per user.
 4. Verify `Reset All` clears only current user's data.
 

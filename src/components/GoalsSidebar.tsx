@@ -14,7 +14,7 @@ interface GoalsSidebarProps {
 }
 
 export function GoalsSidebar({ goals }: GoalsSidebarProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(true)
   const summary = useMemo(() => {
     if (goals.length === 0) return 'אין יעדים פעילים'
     const first = goals[0]

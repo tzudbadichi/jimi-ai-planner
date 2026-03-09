@@ -77,6 +77,8 @@ Create `.env` from `.env.example` and fill:
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require"
 AUTH_SECRET="replace-with-long-random-secret"
+GOOGLE_CLIENT_ID="google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="google-oauth-client-secret"
 GOOGLE_API_KEY="replace-with-gemini-api-key"
 ```
 
@@ -111,7 +113,7 @@ Open: `http://localhost:3000`
 
 ## Auth & Security Notes
 
-- Login is email/password based.
+- Login is Google OAuth based.
 - Session cookie is signed and HTTP-only.
 - In production, `AUTH_SECRET` is mandatory.
 - Data operations are scoped to the authenticated user.

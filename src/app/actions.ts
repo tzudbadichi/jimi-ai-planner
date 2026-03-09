@@ -14,6 +14,7 @@ type RouterActionType =
   | "ADD_LOG"
   | "DELETE_ANCHOR"
   | "DELETE_PROCESS"
+  | "GENERATE_SCHEDULE"
   | "CLEAR_ALL"
 
 type RouterActionData = {
@@ -54,6 +55,72 @@ type InferredList = {
 type ChecklistItem = {
   text: string
   checked: boolean
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function normalizeAnchorDay(day?: string): string {
+  const value = day?.trim()
+  if (!value) return "Daily"
+
+  const map: Record<string, string> = {
+    DAILY: "Daily",
+    SUNDAY: "Sunday",
+    MONDAY: "Monday",
+    TUESDAY: "Tuesday",
+    WEDNESDAY: "Wednesday",
+    THURSDAY: "Thursday",
+    FRIDAY: "Friday",
+    SATURDAY: "Saturday",
+  }
+
+  const upper = value.toUpperCase()
+  if (map[upper]) return map[upper]
+  return value
+}
+
+function cleanGeneratedSchedule(raw: string): string {
+  const normalized = raw.replace(/```(?:markdown|md)?/gi, '').replace(/```/g, '').trim()
+  if (!normalized) return raw
+
+  const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean)
+
+  const timelinePatterns = [
+    /^\*\*(\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2})\*\*\s*[:\-]\s*(.+)$/u,
+    /^\*\*(\d{1,2}:\d{2})\*\*\s*[:\-]\s*(.+)$/u,
+    /^[-*]\s*(\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2})\s*[:\-]\s*(.+)$/u,
+    /^[-*]\s*(\d{1,2}:\d{2})\s*[:\-]\s*(.+)$/u,
+    /^(\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2})\s*[:\-]\s*(.+)$/u,
+    /^(\d{1,2}:\d{2})\s*[:\-]\s*(.+)$/u,
+  ]
+
+  const timelineLines = lines.filter((line) => timelinePatterns.some((pattern) => pattern.test(line)))
+  if (timelineLines.length >= 3) {
+    return timelineLines.join('\n')
+  }
+
+  const firstTableHeaderIndex = lines.findIndex((line) => line.includes('|'))
+  if (firstTableHeaderIndex !== -1 && firstTableHeaderIndex + 1 < lines.length) {
+    const separator = lines[firstTableHeaderIndex + 1]
+    if (/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/u.test(separator)) {
+      const tableLines = [lines[firstTableHeaderIndex], separator]
+      for (let i = firstTableHeaderIndex + 2; i < lines.length; i++) {
+        if (!lines[i].includes('|')) break
+        tableLines.push(lines[i])
+      }
+      if (tableLines.length >= 3) return tableLines.join('\n')
+    }
+  }
+
+  const firstTimeLineIndex = lines.findIndex((line) => /\d{1,2}:\d{2}/.test(line))
+  if (firstTimeLineIndex > 0) {
+    const cropped = lines.slice(firstTimeLineIndex).join('\n').trim()
+    if (cropped) return cropped
+  }
+
+  return normalized
 }
 
 function parseChecklist(goal: string | null): ChecklistItem[] {
@@ -280,11 +347,22 @@ export async function submitMessage(content: string) {
     `;
 
     // C. The Multi-Action Prompt (Supports empty actions for chat-only)
+    const now = new Date()
+    const todayIso = toIsoDate(now)
+    const tomorrow = new Date(now)
+    tomorrow.setDate(now.getDate() + 1)
+    const tomorrowIso = toIsoDate(tomorrow)
+    const todayHebrew = now.toLocaleDateString('he-IL')
+    const tomorrowHebrew = tomorrow.toLocaleDateString('he-IL')
+
     const prompt = `
       System: You are "Jimi", an advanced AI Life OS.
       
       CONTEXT:
-      - Current Date: ${new Date().toLocaleDateString('he-IL')}
+      - Current Date (ISO): ${todayIso}
+      - Current Date (he-IL): ${todayHebrew}
+      - Tomorrow Date (ISO): ${tomorrowIso}
+      - Tomorrow Date (he-IL): ${tomorrowHebrew}
       - ${contextStr}
 
       USER INPUT: "${content}"
@@ -299,13 +377,14 @@ export async function submitMessage(content: string) {
       {
         "actions": [
           {
-            "type": "CREATE_ANCHOR" | "CREATE_PROCESS" | "ADD_LIST_ITEMS" | "ADD_LOG" | "DELETE_ANCHOR" | "DELETE_PROCESS" | "CLEAR_ALL",
+            "type": "CREATE_ANCHOR" | "CREATE_PROCESS" | "ADD_LIST_ITEMS" | "ADD_LOG" | "DELETE_ANCHOR" | "DELETE_PROCESS" | "GENERATE_SCHEDULE" | "CLEAR_ALL",
             "data": { 
                // For CREATE_ANCHOR: "title", "startTime", "endTime", "day"
                // For CREATE_PROCESS: "title", "goal", "blockType" where blockType is "PROCESS" | "LIST"
                // For ADD_LIST_ITEMS: "listTitle" (optional if only one list exists), "items" (array of strings)
                // For ADD_LOG: "processTitle", "content"
                // For DELETE_ANCHOR / DELETE_PROCESS: "id" (MUST be the exact ID from the context)
+               // For GENERATE_SCHEDULE: {"forceRegenerate": true}
                // For CLEAR_ALL: {}
             }
           }
@@ -319,6 +398,8 @@ export async function submitMessage(content: string) {
       3. If user wants to delete a specific process or anchor, you MUST use the exact ID provided in the CONTEXT. Do not use the title.
       4. Use "Recent Messages" to resolve follow-up references like "של זה", "אותה רשימה", "תחליט אתה".
       5. If user asks to add items to a shopping list, prefer ADD_LIST_ITEMS and generate concrete items when requested.
+      6. If user asks to create/generate today's schedule, include a GENERATE_SCHEDULE action.
+      7. If user says "today/tomorrow", resolve dates using the ISO dates in CONTEXT.
     `
 
     // D. Call AI
@@ -376,6 +457,8 @@ export async function submitMessage(content: string) {
     console.log("[3] PARSED ACTIONS:", result.actions ? result.actions.length : 0);
 
     // F. Execute Loop
+    let shouldGenerateSchedule = false
+
     if (result.actions && Array.isArray(result.actions)) {
       for (const action of result.actions) {
         const data = action?.data || {}
@@ -389,7 +472,7 @@ export async function submitMessage(content: string) {
                 title: data.title.trim(),
                 startTime: data.startTime || "00:00",
                 endTime: data.endTime || "00:00",
-                day: data.day || "Daily"
+                day: normalizeAnchorDay(data.day)
               }
             });
             break;
@@ -405,7 +488,7 @@ export async function submitMessage(content: string) {
                   title: normalized.title,
                   startTime: data.startTime || "00:00",
                   endTime: data.endTime || "00:00",
-                  day: data.day || "Daily"
+                  day: normalizeAnchorDay(data.day)
                 }
               })
               break
@@ -507,6 +590,10 @@ export async function submitMessage(content: string) {
             }
             break;
 
+          case "GENERATE_SCHEDULE":
+            shouldGenerateSchedule = true
+            break;
+
           case "CLEAR_ALL":
             console.log("-> CLEARING ALL DATA (Except Messages)");
             await db.log.deleteMany({ where: { userId } });
@@ -517,6 +604,10 @@ export async function submitMessage(content: string) {
             break;
         }
       }
+    }
+
+    if (shouldGenerateSchedule) {
+      await generateScheduleForUser(userId, true)
     }
 
     if (!result.actions || result.actions.length === 0) {
@@ -553,9 +644,8 @@ export async function submitMessage(content: string) {
 }
 
 // --- 3. GENERATE SCHEDULE ---
-export async function generateSchedule(forceRegenerate: boolean = false) {
+async function generateScheduleForUser(userId: string, forceRegenerate: boolean = false) {
   try {
-    const userId = await requireUserId()
     const todayStr = new Date().toLocaleDateString('he-IL')
     
     // If regeneration is not forced, try to fetch today's existing schedule
@@ -590,24 +680,33 @@ export async function generateSchedule(forceRegenerate: boolean = false) {
       1. Create a logical, hour-by-hour timeline for the day.
       2. Strictly respect the fixed Anchor times.
       3. Fit Goal Blocks and List Blocks in the available free time blocks.
-      4. Output the schedule in a clean Markdown format in Hebrew.
+      4. Output only the schedule itself in Hebrew (no intro, no summary, no closing sentence).
+      5. Use one of these formats only:
+         - Markdown table with columns: שעה | משימה
+         - Timeline lines in this exact format: **HH:MM - HH:MM**: משימה
     `
 
     const rawOutput = await generateText(prompt)
+    const cleanedOutput = cleanGeneratedSchedule(rawOutput)
     
     // Save or update the daily schedule in the database
     await db.dailySchedule.upsert({
       where: { userId_date: { userId, date: todayStr } },
-      update: { content: rawOutput },
-      create: { userId, date: todayStr, content: rawOutput }
+      update: { content: cleanedOutput },
+      create: { userId, date: todayStr, content: cleanedOutput }
     })
 
     revalidatePath('/dashboard')
-    return { schedule: rawOutput }
+    return { schedule: cleanedOutput }
   } catch (error) {
     console.error("Error generating schedule:", error)
     throw new Error("Failed to generate schedule")
   }
+}
+
+export async function generateSchedule(forceRegenerate: boolean = false) {
+  const userId = await requireUserId()
+  return generateScheduleForUser(userId, forceRegenerate)
 }
 // --- 4. DIRECT UI ACTIONS ---
 export async function updateProcess(
