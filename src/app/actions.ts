@@ -496,8 +496,8 @@ export async function submitMessage(content: string) {
             const existingProc = await db.process.findUnique({
               where: { userId_title: { userId, title: normalized.title } },
             });
+            const blockType: BlockType = normalized.blockType === "LIST" ? "LIST" : "PROCESS"
             if (!existingProc) {
-              const blockType: BlockType = normalized.blockType === "LIST" ? "LIST" : "PROCESS"
               await db.process.create({
                 data: {
                   userId,
@@ -506,6 +506,14 @@ export async function submitMessage(content: string) {
                   type: blockType
                 }
               });
+            } else if (existingProc.type !== blockType || (data.goal?.trim() && !existingProc.goal)) {
+              await db.process.update({
+                where: { id: existingProc.id },
+                data: {
+                  type: blockType,
+                  goal: data.goal || existingProc.goal
+                }
+              })
             }
             break;
 
@@ -521,7 +529,6 @@ export async function submitMessage(content: string) {
             const listProcesses = await db.process.findMany({
               where: { userId, type: "LIST" }
             })
-            if (listProcesses.length === 0) break
 
             const normalizedHint = normalizeForMatch(listTitleHint)
             let targetList =
@@ -533,7 +540,15 @@ export async function submitMessage(content: string) {
             if (!targetList && listProcesses.length === 1) {
               targetList = listProcesses[0]
             }
-            if (!targetList) break
+
+            if (!targetList) {
+              const fallbackTitle = listTitleHint || "רשימה חדשה"
+              targetList = await db.process.upsert({
+                where: { userId_title: { userId, title: fallbackTitle } },
+                update: { type: "LIST" },
+                create: { userId, title: fallbackTitle, goal: null, type: "LIST" }
+              })
+            }
 
             const existingItems = parseChecklist(targetList.goal)
             const existingNormalized = new Set(existingItems.map((item) => normalizeForMatch(item.text)))

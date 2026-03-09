@@ -48,7 +48,12 @@ export default async function DashboardPage() {
       id: process.id,
       title: process.title,
       goal: process.goal,
-      logsCount: process.logs.length
+      logsCount: process.logs.length,
+      logs: process.logs.map((log) => ({
+        id: log.id,
+        content: log.content,
+        createdAt: log.createdAt.toISOString()
+      }))
     }))
 
   return (
