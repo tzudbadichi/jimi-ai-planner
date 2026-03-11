@@ -22,6 +22,7 @@ model User {
   logs         Log[]
   messages     Message[]
   schedules    dailySchedule[]
+  weeklySchedules WeeklySchedule[]
 }
 
 model Anchor {
@@ -80,4 +81,16 @@ model dailySchedule {
 
   @@unique([userId, date])
   @@map("DailySchedule")
+}
+
+model WeeklySchedule {
+  id        String   @id @default(cuid())
+  weekStart String
+  content   String
+  updatedAt DateTime @updatedAt
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@map("WeeklySchedule")
 }

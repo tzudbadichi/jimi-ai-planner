@@ -1,7 +1,7 @@
-'use client'
+﻿'use client'
 
-import { useState } from 'react'
-import { generateSchedule } from '@/app/actions'
+import { useMemo, useState } from 'react'
+import { generateSchedule, generateWeeklySchedule } from '@/app/actions'
 import { CalendarClock, RefreshCw, Sparkles } from 'lucide-react'
 
 type ParsedTable = {
@@ -81,24 +81,60 @@ function parseTimeline(content: string): ParsedTimelineItem[] {
     .filter((item): item is ParsedTimelineItem => Boolean(item))
 }
 
-export default function SchedulePanel({ initialSchedule }: { initialSchedule: string | null }) {
-  const [schedule, setSchedule] = useState(initialSchedule)
-  const [loading, setLoading] = useState(false)
-  const parsedTable = schedule ? parseMarkdownTable(schedule) : null
-  const parsedTimeline = schedule ? parseTimeline(schedule) : []
+export default function SchedulePanel({
+  initialSchedule,
+  initialWeeklySchedule,
+}: {
+  initialSchedule: string | null
+  initialWeeklySchedule: string | null
+}) {
+  const [mode, setMode] = useState<'daily' | 'weekly'>('daily')
+  const [dailySchedule, setDailySchedule] = useState(initialSchedule)
+  const [weeklySchedule, setWeeklySchedule] = useState<string | null>(initialWeeklySchedule)
+  const [loadingDaily, setLoadingDaily] = useState(false)
+  const [loadingWeekly, setLoadingWeekly] = useState(false)
+
+  const activeSchedule = mode === 'daily' ? dailySchedule : weeklySchedule
+  const parsedTable = useMemo(
+    () => (activeSchedule ? parseMarkdownTable(activeSchedule) : null),
+    [activeSchedule]
+  )
+  const parsedTimeline = useMemo(
+    () => (activeSchedule ? parseTimeline(activeSchedule) : []),
+    [activeSchedule]
+  )
   const tasksCount = parsedTable ? parsedTable.rows.length : parsedTimeline.length
+  const timeColumnIndex = parsedTable
+    ? parsedTable.headers.findIndex((header) => /שעה|time/i.test(header))
+    : -1
 
   const handleRefresh = async () => {
-    setLoading(true)
+    setLoadingDaily(true)
     try {
       const result = await generateSchedule(true)
       if (result.schedule) {
-        setSchedule(result.schedule)
+        setDailySchedule(result.schedule)
+        setMode('daily')
       }
     } catch (error) {
       console.error('Failed to refresh schedule:', error)
     } finally {
-      setLoading(false)
+      setLoadingDaily(false)
+    }
+  }
+
+  const handleWeeklyGenerate = async () => {
+    setLoadingWeekly(true)
+    try {
+      const result = await generateWeeklySchedule()
+      if (result.schedule) {
+        setWeeklySchedule(result.schedule)
+        setMode('weekly')
+      }
+    } catch (error) {
+      console.error('Failed to generate weekly schedule:', error)
+    } finally {
+      setLoadingWeekly(false)
     }
   }
 
@@ -109,19 +145,49 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
           <div>
             <div className="mb-1 flex items-center gap-2 text-cyan-100">
               <CalendarClock className="h-4 w-4" />
-              <span className="text-xs font-medium">לו״ז יומי חכם</span>
+              <span className="text-xs font-medium">׳לוז יומי חכם</span>
             </div>
-            <h2 className="text-xl font-bold tracking-tight">תכנון היום</h2>
-            <p className="mt-1 text-xs text-blue-100">בנוי אוטומטית לפי עוגנים, יעדים ורשימות</p>
+            <h2 className="text-xl font-bold tracking-tight">
+              {mode === 'daily' ? 'תכנון היום' : 'תכנון שבועי'}
+            </h2>
+            <p className="mt-1 text-xs text-blue-100">
+              {mode === 'daily'
+                ? 'בנוי אוטומטית לפי עוגנים, יעדים ורשימות'
+                : 'לוז שבועי אוטומטי עם עוגנים ויעדים'}
+            </p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-2 text-sm text-white transition-colors hover:bg-white/25 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'מייצר...' : 'רענן'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setMode('daily')}
+              disabled={!dailySchedule || mode === 'daily'}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50"
+            >
+              הצג יומי
+            </button>
+            <button
+              onClick={() => setMode('weekly')}
+              disabled={!weeklySchedule || mode === 'weekly'}
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-100/40 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-50 transition-colors hover:bg-cyan-200/20 disabled:opacity-50"
+            >
+              הצג שבועי
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={loadingDaily}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-2 text-sm text-white transition-colors hover:bg-white/25 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingDaily ? 'animate-spin' : ''}`} />
+              {loadingDaily ? 'מייצר...' : 'רענן'}
+            </button>
+            <button
+              onClick={handleWeeklyGenerate}
+              disabled={loadingWeekly}
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-100/40 bg-cyan-200/15 px-3 py-2 text-sm text-cyan-50 transition-colors hover:bg-cyan-200/25 disabled:opacity-50"
+            >
+              <Sparkles className={`h-4 w-4 ${loadingWeekly ? 'animate-spin' : ''}`} />
+              {loadingWeekly ? 'מייצר...' : 'גנרט שבועי'}
+            </button>
+          </div>
         </div>
 
         {(parsedTable || parsedTimeline.length > 0) && (
@@ -130,13 +196,15 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
               <Sparkles className="h-3.5 w-3.5" />
               {tasksCount} משימות מתוזמנות
             </span>
-            <span className="rounded-full border border-blue-200/30 bg-blue-200/10 px-2.5 py-1 text-blue-100">עודכן היום</span>
+            <span className="rounded-full border border-blue-200/30 bg-blue-200/10 px-2.5 py-1 text-blue-100">
+              {mode === 'daily' ? 'עודכן היום' : 'עודכן השבוע'}
+            </span>
           </div>
         )}
       </div>
 
       <div className="bg-gradient-to-b from-white to-slate-50/40 p-5">
-        {schedule ? (
+        {activeSchedule ? (
           parsedTable ? (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="max-h-[460px] overflow-auto">
@@ -161,7 +229,7 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
                       >
                         {row.map((cell, cellIndex) => (
                           <td key={`${cellIndex}-${cell}`} className="px-4 py-3 align-top text-right text-slate-700">
-                            {cellIndex === 0 && looksLikeTimeRange(cell) ? (
+                            {cellIndex === timeColumnIndex && looksLikeTimeRange(cell) ? (
                               <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
                                 {cell}
                               </span>
@@ -194,12 +262,31 @@ export default function SchedulePanel({ initialSchedule }: { initialSchedule: st
             </div>
           ) : (
             <div className="max-h-[460px] overflow-auto rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-              <pre className="whitespace-pre-wrap font-sans">{schedule}</pre>
+              <pre className="whitespace-pre-wrap font-sans">{activeSchedule}</pre>
             </div>
           )
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-            אין עדיין לו״ז להיום. לחץ על רענן כדי לייצר תכנון.
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center shadow-sm">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
+              <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-400" aria-hidden="true">
+                <path
+                  d="M7 3h10a2 2 0 0 1 2 2v3H5V5a2 2 0 0 1 2-2zm-2 8h14v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6zm4 2h6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <h3 className="mt-3 text-base font-semibold text-slate-700">
+              {mode === 'daily' ? 'No daily schedule yet' : 'No weekly schedule yet'}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {mode === 'daily'
+                ? 'Tap refresh to generate today’s plan.'
+                : 'Generate a weekly plan to get started.'}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">Type a prompt in the chat to create your first block.</p>
           </div>
         )}
       </div>

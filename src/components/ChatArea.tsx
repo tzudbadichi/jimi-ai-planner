@@ -1,8 +1,9 @@
-'use client'
+﻿'use client'
 
 import { submitMessage } from '@/app/actions'
-import { SendHorizontal } from 'lucide-react'
+import { SendHorizontal, MessageCircle, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const MessageBubble = ({ role, content }: { role: string; content: string }) => {
   const isUser = role === 'user'
@@ -30,17 +31,23 @@ const LoadingBubble = () => (
 
 interface ChatAreaProps {
   initialMessages: { id: string; role: string; content: string }[]
+  variant?: 'desktop' | 'mobile'
 }
 
-export default function ChatArea({ initialMessages }: ChatAreaProps) {
-  const [messages, setMessages] = useState(initialMessages)
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+function ChatCard({
+  messages,
+  input,
+  setInput,
+  isLoading,
+  onSend,
+}: {
+  messages: { id: string; role: string; content: string }[]
+  input: string
+  setInput: (value: string) => void
+  isLoading: boolean
+  onSend: () => void
+}) {
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setMessages(initialMessages)
-  }, [initialMessages])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -48,30 +55,8 @@ export default function ChatArea({ initialMessages }: ChatAreaProps) {
     }
   }, [messages])
 
-  async function handleSend() {
-    if (!input.trim() || isLoading) return
-
-    const userMsg = { id: Date.now().toString(), role: 'user', content: input }
-    setMessages((prev) => [...prev, userMsg])
-    setInput('')
-    setIsLoading(true)
-
-    try {
-      const result = await submitMessage(userMsg.content)
-      if (result?.error) {
-        console.error(result.error)
-        return
-      }
-      window.location.reload()
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   return (
-    <div className="flex h-[85vh] flex-col overflow-hidden rounded-3xl border border-gray-200/60 bg-white shadow-xl">
+    <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-gray-200/60 bg-white shadow-xl">
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 p-4 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 animate-pulse rounded-full bg-green-500"></div>
@@ -90,7 +75,7 @@ export default function ChatArea({ initialMessages }: ChatAreaProps) {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            handleSend()
+            onSend()
           }}
           className="flex items-center gap-2"
         >
@@ -113,5 +98,91 @@ export default function ChatArea({ initialMessages }: ChatAreaProps) {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function ChatArea({ initialMessages, variant = 'desktop' }: ChatAreaProps) {
+  const [messages, setMessages] = useState(initialMessages)
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    setMessages(initialMessages)
+  }, [initialMessages])
+
+  async function handleSend() {
+    if (!input.trim() || isLoading) return
+
+    const userMsg = { id: Date.now().toString(), role: 'user', content: input }
+    setMessages((prev) => [...prev, userMsg])
+    setInput('')
+    setIsLoading(true)
+
+    try {
+      const result = await submitMessage(userMsg.content)
+      if (result?.error) {
+        console.error(result.error)
+        return
+      }
+      router.refresh()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (variant === 'mobile') {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl"
+          aria-label="Open chat"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </button>
+
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex items-end bg-black/40 backdrop-blur-sm">
+            <div className="w-full rounded-t-3xl bg-white p-3 shadow-2xl">
+              <div className="mb-2 flex items-center justify-between px-2">
+                <span className="text-sm font-semibold text-gray-700">Chat</span>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600"
+                  aria-label="Close chat"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="h-[70vh]">
+                <ChatCard
+                  messages={messages}
+                  input={input}
+                  setInput={setInput}
+                  isLoading={isLoading}
+                  onSend={handleSend}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  return (
+    <ChatCard
+      messages={messages}
+      input={input}
+      setInput={setInput}
+      isLoading={isLoading}
+      onSend={handleSend}
+    />
   )
 }

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db"
+﻿import { db } from "@/lib/db"
 import ChatArea from "@/components/ChatArea"
 import ProcessGrid from "@/components/ProcessGrid"
 import SchedulePanel from "@/components/SchedulePanel"
@@ -7,6 +7,8 @@ import { GoalsSidebar } from "@/components/GoalsSidebar"
 import ResetAllButton from "@/components/ResetAllButton"
 import SignOutButton from "@/components/SignOutButton"
 import { requireUser } from "@/lib/auth"
+import { getWeeklyScheduleForCurrentWeek } from "@/app/actions"
+import { toIsoDate } from "@/services/schedule.service"
 
 export const dynamic = 'force-dynamic'
 
@@ -29,11 +31,18 @@ export default async function DashboardPage() {
     orderBy: { createdAt: 'asc' },
     select: { id: true, role: true, content: true }
   })
-  
-  const todayStr = new Date().toLocaleDateString('he-IL')
-  const todaySchedule = await db.dailySchedule.findUnique({
-    where: { userId_date: { userId: user.id, date: todayStr } }
-  })
+
+  const today = new Date()
+  const todayIso = toIsoDate(today)
+  const todayHebrew = today.toLocaleDateString('he-IL')
+  const todaySchedule =
+    (await db.dailySchedule.findUnique({
+      where: { userId_date: { userId: user.id, date: todayIso } }
+    })) ||
+    (await db.dailySchedule.findUnique({
+      where: { userId_date: { userId: user.id, date: todayHebrew } }
+    }))
+  const weeklySchedule = await getWeeklyScheduleForCurrentWeek()
   const anchors = await db.anchor.findMany({
     where: { userId: user.id },
     orderBy: [
@@ -57,9 +66,9 @@ export default async function DashboardPage() {
     }))
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 md:flex">
+      <main className="flex-1 p-5 md:p-6">
+        <div className="mx-auto max-w-6xl space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Jimi Dashboard</h1>
@@ -71,24 +80,31 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div>
-            <SchedulePanel initialSchedule={todaySchedule?.content || null} />
-          </div>
+          <section>
+            <SchedulePanel
+              initialSchedule={todaySchedule?.content || null}
+              initialWeeklySchedule={weeklySchedule?.content || null}
+            />
+          </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800">בלוקים</h2>
+            <ProcessGrid processes={processes} mode="all" />
+          </section>
+
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
             <AnchorsSidebar anchors={mergedAnchors} />
             <GoalsSidebar goals={goalBlocks} />
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">רשימות</h2>
-            <ProcessGrid processes={processes} mode="listsOnly" />
-          </div>
+          </section>
         </div>
-      </div>
-      
-      <div className="w-full md:w-96 bg-white border-l border-gray-200 flex flex-col h-screen shadow-lg">
-        <ChatArea initialMessages={initialMessages} />
+      </main>
+
+      <aside className="hidden md:flex md:w-[360px] md:shrink-0 md:border-l md:border-gray-200 md:bg-white md:shadow-lg md:sticky md:top-0 md:h-screen">
+        <ChatArea initialMessages={initialMessages} variant="desktop" />
+      </aside>
+
+      <div className="md:hidden">
+        <ChatArea initialMessages={initialMessages} variant="mobile" />
       </div>
     </div>
   )
