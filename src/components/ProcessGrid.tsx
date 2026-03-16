@@ -228,8 +228,20 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
             <span className="text-xs text-gray-500">{processBlocks.length}</span>
           </div>
           {processBlocks.length === 0 ? (
-            <div className="p-4 border border-dashed rounded-xl bg-gray-50 text-gray-400 text-sm">
-              ׳׳™׳ ׳™׳¢׳“׳™׳ ׳₪׳¢׳™׳׳™׳.
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center shadow-sm">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+                <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-400" aria-hidden="true">
+                  <path
+                    d="M8 6h8m-8 4h5m-7 6h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <h3 className="mt-3 text-sm font-semibold text-slate-700">אין יעדים פעילים</h3>
+              <p className="mt-1 text-xs text-slate-500">כתבו פרומפט בצ׳אט כדי ליצור את היעד הראשון.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -329,8 +341,20 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
             <span className="text-xs text-gray-500">{listBlocks.length}</span>
           </div>
           {listBlocks.length === 0 ? (
-            <div className="p-4 border border-dashed rounded-xl bg-gray-50 text-gray-400 text-sm">
-              ׳׳™׳ ׳¨׳©׳™׳׳•׳× ׳₪׳¢׳™׳׳•׳×.
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center shadow-sm">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+                <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-400" aria-hidden="true">
+                  <path
+                    d="M7 6h10m-10 4h10m-10 4h6M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <h3 className="mt-3 text-sm font-semibold text-slate-700">אין רשימות פעילות</h3>
+              <p className="mt-1 text-xs text-slate-500">כתבו פרומפט בצ׳אט כדי ליצור את הרשימה הראשונה.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
