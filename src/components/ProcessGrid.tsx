@@ -123,7 +123,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('׳‘׳˜׳•׳— ׳׳׳—׳•׳§ ׳׳× ׳”׳‘׳׳•׳§?')) return
+    if (!confirm('בטוח למחוק את הבלוק?')) return
     await deleteProcessById(id)
     setItems((prev) => prev.filter((process) => process.id !== id))
     if (expandedId === id) setExpandedId(null)
@@ -224,7 +224,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
         {showProcesses && (
           <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">׳™׳¢׳“׳™׳</h3>
+            <h3 className="text-lg font-semibold text-gray-800">יעדים</h3>
             <span className="text-xs text-gray-500">{processBlocks.length}</span>
           </div>
           {processBlocks.length === 0 ? (
@@ -258,35 +258,35 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
                           className="w-full bg-transparent font-bold text-lg text-gray-800 border-b border-transparent focus:outline-none focus:border-blue-500"
-                          placeholder="׳›׳•׳×׳¨׳×"
+                          placeholder="כותרת"
                         />
                         <select
                           value={editType}
                           onChange={(e) => setEditType(normalizeType(e.target.value))}
                           className="text-sm border border-gray-200 rounded p-2 focus:outline-none focus:border-blue-500"
                         >
-                          <option value="PROCESS">׳™׳¢׳“</option>
-                          <option value="LIST">׳¨׳©׳™׳׳”</option>
+                          <option value="PROCESS">יעד</option>
+                          <option value="LIST">רשימה</option>
                         </select>
                         <textarea
                           value={editGoal}
                           onChange={(e) => setEditGoal(e.target.value)}
                           className="mt-2 w-full resize-none bg-transparent text-sm text-gray-600 border border-transparent focus:outline-none focus:border-blue-500 rounded-md p-0"
                           rows={3}
-                          placeholder="׳×׳™׳׳•׳¨ ׳™׳¢׳“"
+                          placeholder="תיאור יעד"
                         />
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleSave(process.id)}
                             className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
                           >
-                            ׳©׳׳•׳¨
+                            שמור
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
                             className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
                           >
-                            ׳‘׳™׳˜׳•׳
+                            ביטול
                           </button>
                         </div>
                       </div>
@@ -295,7 +295,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                         <div>
                           <div className="flex items-center justify-between gap-2">
                             <h3 className="font-bold text-lg text-gray-800 break-words">{process.title}</h3>
-                            <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">׳™׳¢׳“</span>
+                            <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">יעד</span>
                           </div>
                           {process.goal && (
                             <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap line-clamp-5">{process.goal}</p>
@@ -303,9 +303,9 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                         </div>
                         <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
                           <div className="flex justify-between items-center text-xs text-gray-500">
-                            <span>{process.logs.length} ׳׳•׳’׳™׳</span>
+                            <span>{process.logs.length} לוגים</span>
                             <span>
-                              {lastLog ? `׳¢׳“׳›׳•׳ ׳׳—׳¨׳•׳: ${toDate(lastLog.createdAt).toLocaleDateString('he-IL')}` : '׳׳׳ ׳¢׳“׳›׳•׳ ׳™׳'}
+                              {lastLog ? `עדכון אחרון: ${toDate(lastLog.createdAt).toLocaleDateString('he-IL')}` : 'ללא עדכונים'}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
@@ -314,13 +314,13 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                             </span>
                             <div className="space-x-3 space-x-reverse opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                               <button onClick={() => setExpandedId(process.id)} className="text-xs text-slate-500 hover:text-slate-700 font-medium">
-                                ׳׳•׳’ ׳•׳’׳¨׳£
+                                לוג וגרף
                               </button>
                               <button onClick={() => startEditing(process)} className="text-xs text-slate-500 hover:text-slate-700 font-medium">
-                                ׳¢׳¨׳•׳
+                                ערוך
                               </button>
                               <button onClick={() => handleDelete(process.id)} className="text-xs text-slate-400 hover:text-rose-600 font-medium">
-                                ׳׳—׳§
+                                מחק
                               </button>
                             </div>
                           </div>
@@ -337,7 +337,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
 
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">׳¨׳©׳™׳׳•׳×</h3>
+            <h3 className="text-lg font-semibold text-gray-800">רשימות</h3>
             <span className="text-xs text-gray-500">{listBlocks.length}</span>
           </div>
           {listBlocks.length === 0 ? (
@@ -372,35 +372,35 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
                           className="w-full bg-transparent font-bold text-lg text-gray-800 border-b border-transparent focus:outline-none focus:border-blue-500"
-                          placeholder="׳›׳•׳×׳¨׳× ׳¨׳©׳™׳׳”"
+                          placeholder="כותרת רשימה"
                         />
                         <select
                           value={editType}
                           onChange={(e) => setEditType(normalizeType(e.target.value))}
                           className="text-sm border border-gray-200 rounded p-2 focus:outline-none focus:border-blue-500"
                         >
-                          <option value="LIST">׳¨׳©׳™׳׳”</option>
-                          <option value="PROCESS">׳™׳¢׳“</option>
+                          <option value="LIST">רשימה</option>
+                          <option value="PROCESS">יעד</option>
                         </select>
                         <textarea
                           value={editGoal}
                           onChange={(e) => setEditGoal(e.target.value)}
                           className="mt-2 w-full resize-none bg-transparent text-sm text-gray-600 border border-transparent focus:outline-none focus:border-blue-500 rounded-md p-0"
                           rows={3}
-                          placeholder="׳›׳ ׳©׳•׳¨׳” ׳”׳™׳ ׳₪׳¨׳™׳˜"
+                          placeholder="כל שורה היא פריט"
                         />
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleSave(process.id)}
                             className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
                           >
-                            ׳©׳׳•׳¨
+                            שמור
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
                             className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
                           >
-                            ׳‘׳™׳˜׳•׳
+                            ביטול
                           </button>
                         </div>
                       </div>
@@ -408,10 +408,10 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                       <>
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="font-bold text-lg text-gray-800 break-words">{process.title}</h3>
-                          <span className="text-[10px] px-2 py-1 rounded-full bg-blue-50 text-blue-700">׳¨׳©׳™׳׳”</span>
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-blue-50 text-blue-700">רשימה</span>
                         </div>
                         <div className="text-xs text-gray-500 font-medium">
-                          {checklist.length ? `${completed}/${checklist.length} ׳”׳•׳©׳׳׳•` : '׳׳™׳ ׳₪׳¨׳™׳˜׳™׳ ׳¢׳“׳™׳™׳'}
+                          {checklist.length ? `${completed}/${checklist.length} הושלמו` : 'אין פריטים עדיין'}
                         </div>
                         <div className="space-y-2 max-h-40 overflow-auto pr-1">
                           {checklist.map((item, index) => (
@@ -430,7 +430,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                                 onClick={() => removeChecklistItem(process.id, index)}
                                 className="text-[11px] text-slate-400 hover:text-rose-600 mr-auto"
                               >
-                                ׳׳—׳§
+                                מחק
                               </button>
                             </label>
                           ))}
@@ -442,22 +442,22 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                               setNewChecklistTextById((prev) => ({ ...prev, [process.id]: e.target.value }))
                             }
                             className="flex-1 text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"
-                            placeholder="׳”׳•׳¡׳£ ׳₪׳¨׳™׳˜"
+                            placeholder="הוסף פריט"
                           />
                           <button
                             type="button"
                             onClick={() => addChecklistItem(process.id)}
                             className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded"
                           >
-                            ׳”׳•׳¡׳£
+                            הוסף
                           </button>
                         </div>
                         <div className="flex justify-end items-center pt-2 border-t border-gray-100 space-x-3 space-x-reverse opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                           <button onClick={() => startEditing(process)} className="text-xs text-slate-500 hover:text-slate-700 font-medium">
-                            ׳¢׳¨׳•׳
+                            ערוך
                           </button>
                           <button onClick={() => handleDelete(process.id)} className="text-xs text-slate-400 hover:text-rose-600 font-medium">
-                            ׳׳—׳§
+                            מחק
                           </button>
                         </div>
                       </>
@@ -476,14 +476,14 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
             <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{selectedProcess.title}</h2>
-                <p className="text-xs text-gray-500 mt-1">{`׳׳•׳’ ׳₪׳¢׳™׳׳•׳× ׳׳₪׳™ ${PROGRESS_DAYS} ׳”׳™׳׳™׳ ׳”׳׳—׳¨׳•׳ ׳™׳`}</p>
+                <p className="text-xs text-gray-500 mt-1">{`לוג פעילות לפי ${PROGRESS_DAYS} הימים האחרונים`}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setExpandedId(null)}
                 className="text-sm px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700"
               >
-                ׳¡׳’׳•׳¨
+                סגור
               </button>
             </div>
 
@@ -507,7 +507,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                   value={newLogText}
                   onChange={(e) => setNewLogText(e.target.value)}
                   className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-                  placeholder="׳”׳•׳¡׳£ ׳¨׳©׳•׳׳× ׳׳•׳’ ׳—׳“׳©׳”"
+                  placeholder="הוסף רשומת לוג חדשה"
                 />
                 <button
                   type="button"
@@ -515,19 +515,19 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                   disabled={savingLog || !newLogText.trim()}
                   className="text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white px-4 py-2 rounded-lg"
                 >
-                  ׳”׳•׳¡׳£ ׳׳•׳’
+                  הוסף לוג
                 </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
-              {selectedProcess.logs.length === 0 && <p className="text-sm text-gray-400">׳׳™׳ ׳¢׳“׳™׳™׳ ׳׳•׳’׳™׳ ׳׳™׳¢׳“ ׳”׳–׳”.</p>}
+              {selectedProcess.logs.length === 0 && <p className="text-sm text-gray-400">אין עדיין לוגים ליעד הזה.</p>}
               {selectedProcess.logs.map((log) => (
                 <div key={log.id} className="border border-gray-100 rounded-2xl px-3 py-2.5 bg-gray-50 flex flex-col gap-1">
                   <p className="text-sm text-gray-800 whitespace-pre-wrap">{log.content}</p>
                   <div className="flex items-center justify-between text-[11px] text-gray-500">
                     <span>{toDate(log.createdAt).toLocaleString('he-IL')}</span>
                     <button type="button" onClick={() => handleDeleteLog(log.id)} className="text-red-500 hover:text-red-700">
-                      ׳׳—׳§
+                      מחק
                     </button>
                   </div>
                 </div>
