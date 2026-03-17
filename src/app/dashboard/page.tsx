@@ -78,8 +78,7 @@ export default async function DashboardPage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">בלוקים</h2>
-            <ProcessGrid processes={processes} mode="all" />
+            <ProcessGrid processes={processes} mode="listsOnly" />
           </section>
 
           <section className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">

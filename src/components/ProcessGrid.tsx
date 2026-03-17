@@ -76,6 +76,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
   const [items, setItems] = useState(processes)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isListsOpen, setIsListsOpen] = useState(true)
   const [editTitle, setEditTitle] = useState('')
   const [editGoal, setEditGoal] = useState('')
   const [editType, setEditType] = useState<BlockType>('PROCESS')
@@ -335,37 +336,49 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
           </section>
         )}
 
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">רשימות</h3>
-            <span className="text-xs text-gray-500">{listBlocks.length}</span>
-          </div>
-          {listBlocks.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center shadow-sm">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
-                <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-400" aria-hidden="true">
-                  <path
-                    d="M7 6h10m-10 4h10m-10 4h6M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-3 text-sm font-semibold text-slate-700">אין רשימות פעילות</h3>
-              <p className="mt-1 text-xs text-slate-500">הקלד הודעה בצ׳אט כדי ליצור את הרשימה הראשונה שלך.</p>
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">רשימות</h3>
+              <p className="text-xs text-gray-500">{listBlocks.length} רשימות פעילות</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {listBlocks.map((process) => {
-                const checklist = parseChecklist(process.goal)
-                const completed = checklist.filter((item) => item.checked).length
-                return (
-                  <div
-                    key={process.id}
-                    className="group border border-gray-200 rounded-xl p-5 shadow-sm bg-white hover:shadow-md transition-all flex flex-col gap-3 min-h-[220px]"
-                  >
+            <button
+              type="button"
+              onClick={() => setIsListsOpen((prev) => !prev)}
+              className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-700 transition-colors hover:bg-blue-100"
+            >
+              {isListsOpen ? 'סגור' : 'פתח'}
+            </button>
+          </div>
+
+          {isListsOpen && (
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              {listBlocks.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center shadow-sm">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-400" aria-hidden="true">
+                      <path
+                        d="M7 6h10m-10 4h10m-10 4h6M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold text-slate-700">אין רשימות פעילות</h3>
+                  <p className="mt-1 text-xs text-slate-500">הקלד הודעה בצ׳אט כדי ליצור את הרשימה הראשונה שלך.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {listBlocks.map((process) => {
+                    const checklist = parseChecklist(process.goal)
+                    const completed = checklist.filter((item) => item.checked).length
+                    return (
+                      <div
+                        key={process.id}
+                        className="group border border-gray-200 rounded-xl p-5 shadow-sm bg-white hover:shadow-md transition-all flex flex-col gap-3 min-h-[220px]"
+                      >
                     {editingId === process.id ? (
                       <div className="flex flex-col gap-2">
                         <input
@@ -462,9 +475,11 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                         </div>
                       </>
                     )}
-                  </div>
-                )
-              })}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </section>
