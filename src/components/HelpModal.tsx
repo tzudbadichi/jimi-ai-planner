@@ -36,6 +36,11 @@ export default function HelpModal() {
             </div>
 
             <div className="mt-5 space-y-4 text-sm leading-6 text-gray-700">
+              <p className="rounded-2xl border border-cyan-100/70 bg-cyan-50/70 p-4 text-gray-700">
+                ברוכים הבאים לג׳ימי, מערכת ההפעלה של היום שלכם. כדי להתחיל, פתחו את הצ׳אט וספרו לג׳ימי במילים
+                שלכם על המשימות, ההתחייבויות והמטרות שלכם. המערכת תנתח את המידע, תבנה עבורכם את אבני הבניין
+                של היום, ותייצר לו״ז יומי אוטומטי.
+              </p>
               <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
                 <h3 className="font-semibold text-gray-900">עוגנים (Anchors)</h3>
                 <p className="mt-1 text-gray-600">
@@ -43,15 +48,20 @@ export default function HelpModal() {
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                <h3 className="font-semibold text-gray-900">בלוקים (Blocks/Goals)</h3>
+                <h3 className="font-semibold text-gray-900">בלוקים (Blocks)</h3>
+                <p className="mt-1 text-gray-600">משימות או פעולות גמישות שצריך לשבץ בזמן הפנוי.</p>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <h3 className="font-semibold text-gray-900">יעדים ומעקב (Goals & Logs)</h3>
                 <p className="mt-1 text-gray-600">
-                  משימות או יעדים גמישים שצריך לשבץ בזמן הפנוי.
+                  מטרות ארוכות טווח שכוללות יומן מעקב דינמי. אתם מעדכנים את ג׳ימי בהתקדמות שלכם בשטח, והמערכת
+                  שומרת היסטוריה ומציגה גרף התקדמות.
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
                 <h3 className="font-semibold text-gray-900">לו״ז יומי (Daily Schedule)</h3>
                 <p className="mt-1 text-gray-600">
-                  התכנון שהמערכת מייצרת עבורך בכל בוקר בהתבסס על העוגנים והבלוקים שלך.
+                  התכנון שהמערכת מייצרת עבורך בכל בוקר בהתבסס על העוגנים, הבלוקים והיעדים שלך.
                 </p>
               </div>
             </div>
