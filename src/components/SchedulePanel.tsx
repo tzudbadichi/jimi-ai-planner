@@ -279,14 +279,14 @@ export default function SchedulePanel({
               </svg>
             </div>
             <h3 className="mt-3 text-base font-semibold text-slate-700">
-              {mode === 'daily' ? 'No daily schedule yet' : 'No weekly schedule yet'}
+              {mode === 'daily' ? 'אין לו״ז יומי עדיין' : 'אין לו״ז שבועי עדיין'}
             </h3>
             <p className="mt-1 text-sm text-slate-500">
               {mode === 'daily'
-                ? 'Tap refresh to generate today’s plan.'
-                : 'Generate a weekly plan to get started.'}
+                ? 'לחצו על רענון כדי לייצר תכנון ליום.'
+                : 'צרו תכנון שבועי כדי להתחיל.'}
             </p>
-            <p className="mt-1 text-xs text-slate-400">Type a prompt in the chat to create your first block.</p>
+            <p className="mt-1 text-xs text-slate-400">הקלד הודעה בצ׳אט כדי ליצור את הבלוק הראשון שלך.</p>
           </div>
         )}
       </div>

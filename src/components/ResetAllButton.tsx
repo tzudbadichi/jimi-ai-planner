@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { resetAllData } from '@/app/actions'
 import { useRouter } from 'next/navigation'
@@ -10,7 +10,7 @@ export default function ResetAllButton() {
   const router = useRouter()
 
   const handleReset = () => {
-    const shouldReset = confirm('למחוק הכל? הפעולה מוחקת לוגים, עוגנים, יעדים, רשימות, לו״ז והיסטוריית צ׳אט.')
+    const shouldReset = confirm('בטוח למחוק הכול? הפעולה מוחקת לוגים, עוגנים, יעדים, רשימות, לו״ז והיסטוריית צ׳אט.')
     if (!shouldReset) return
 
     setError(null)
@@ -32,7 +32,7 @@ export default function ResetAllButton() {
         disabled={isPending}
         className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? 'מאפס...' : 'Reset All'}
+        {isPending ? 'מאפס...' : 'אפס הכל'}
       </button>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

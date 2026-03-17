@@ -140,17 +140,18 @@ export default function ChatArea({ initialMessages, variant = 'desktop' }: ChatA
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl"
+          className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-2xl ring-4 ring-indigo-600/20"
           aria-label="Open chat"
         >
           <MessageCircle className="h-6 w-6" />
+          <span>צ׳אט</span>
         </button>
 
         {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-end bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end bg-black/50 backdrop-blur-sm">
             <div className="w-full rounded-t-3xl bg-white p-3 shadow-2xl">
               <div className="mb-2 flex items-center justify-between px-2">
-                <span className="text-sm font-semibold text-gray-700">Chat</span>
+                <span className="text-sm font-semibold text-gray-700">צ׳אט עם Jimi</span>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
@@ -160,7 +161,7 @@ export default function ChatArea({ initialMessages, variant = 'desktop' }: ChatA
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="h-[70vh]">
+              <div className="h-[85vh]">
                 <ChatCard
                   messages={messages}
                   input={input}

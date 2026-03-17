@@ -4,8 +4,7 @@ import ProcessGrid from "@/components/ProcessGrid"
 import SchedulePanel from "@/components/SchedulePanel"
 import { AnchorsSidebar } from "@/components/AnchorsSidebar"
 import { GoalsSidebar } from "@/components/GoalsSidebar"
-import ResetAllButton from "@/components/ResetAllButton"
-import SignOutButton from "@/components/SignOutButton"
+import DashboardHeader from "@/components/DashboardHeader"
 import { requireUser } from "@/lib/auth"
 import { getWeeklyScheduleForCurrentWeek } from "@/app/actions"
 import { toIsoDate } from "@/services/schedule.service"
@@ -67,18 +66,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
-      <main className="flex-1 p-5 md:p-6">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">Jimi Dashboard</h1>
-              <p className="mt-1 text-sm text-gray-500">{user.email}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <ResetAllButton />
-              <SignOutButton />
-            </div>
-          </div>
+      <main className="flex-1 p-5 pb-24 md:p-6 md:pb-6">
+        <div className="mx-auto max-w-6xl space-y-5 md:space-y-6">
+          <DashboardHeader email={user.email || ''} />
 
           <section>
             <SchedulePanel

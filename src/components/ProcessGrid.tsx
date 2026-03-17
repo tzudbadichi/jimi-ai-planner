@@ -241,7 +241,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                 </svg>
               </div>
               <h3 className="mt-3 text-sm font-semibold text-slate-700">אין יעדים פעילים</h3>
-              <p className="mt-1 text-xs text-slate-500">כתבו פרומפט בצ׳אט כדי ליצור את היעד הראשון.</p>
+              <p className="mt-1 text-xs text-slate-500">הקלד הודעה בצ׳אט כדי ליצור את היעד הראשון שלך.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -354,7 +354,7 @@ export default function ProcessGrid({ processes, mode = 'all' }: ProcessGridProp
                 </svg>
               </div>
               <h3 className="mt-3 text-sm font-semibold text-slate-700">אין רשימות פעילות</h3>
-              <p className="mt-1 text-xs text-slate-500">כתבו פרומפט בצ׳אט כדי ליצור את הרשימה הראשונה.</p>
+              <p className="mt-1 text-xs text-slate-500">הקלד הודעה בצ׳אט כדי ליצור את הרשימה הראשונה שלך.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
