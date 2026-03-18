@@ -177,7 +177,7 @@ export default function SchedulePanel({
               className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-2 text-sm text-white transition-colors hover:bg-white/25 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loadingDaily ? 'animate-spin' : ''}`} />
-              {loadingDaily ? 'מייצר...' : 'רענן'}
+              {loadingDaily ? 'מייצר...' : 'הצג לוז יומי'}
             </button>
             <button
               onClick={handleWeeklyGenerate}
@@ -185,7 +185,7 @@ export default function SchedulePanel({
               className="inline-flex items-center gap-2 rounded-xl border border-cyan-100/40 bg-cyan-200/15 px-3 py-2 text-sm text-cyan-50 transition-colors hover:bg-cyan-200/25 disabled:opacity-50"
             >
               <Sparkles className={`h-4 w-4 ${loadingWeekly ? 'animate-spin' : ''}`} />
-              {loadingWeekly ? 'מייצר...' : 'גנרט שבועי'}
+              {loadingWeekly ? 'מייצר...' : 'הצג לוז שבועי'}
             </button>
           </div>
         </div>
