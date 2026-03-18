@@ -64,11 +64,20 @@ export async function generateScheduleForUser(userId: string, forceRegenerate: b
   }
 }
 
-export async function generateWeeklyScheduleForUser(userId: string) {
+export async function generateWeeklyScheduleForUser(userId: string, forceRegenerate: boolean = false) {
   const now = new Date()
   const weekStart = getWeekStart(now)
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
+
+  if (!forceRegenerate) {
+    const existing = await db.weeklySchedule.findUnique({
+      where: { userId_weekStart: { userId, weekStart: toIsoDate(weekStart) } }
+    })
+    if (existing) {
+      return { schedule: existing.content }
+    }
+  }
 
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
   const days = Array.from({ length: 7 }, (_, index) => {

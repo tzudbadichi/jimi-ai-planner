@@ -370,9 +370,9 @@ export async function generateSchedule(forceRegenerate: boolean = false) {
   return result
 }
 
-export async function generateWeeklySchedule() {
+export async function generateWeeklySchedule(forceRegenerate: boolean = false) {
   const userId = await requireUserId()
-  const result = await generateWeeklyScheduleForUser(userId)
+  const result = await generateWeeklyScheduleForUser(userId, forceRegenerate)
   revalidatePath('/dashboard')
   return result
 }

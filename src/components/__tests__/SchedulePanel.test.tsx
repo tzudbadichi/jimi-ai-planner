@@ -15,11 +15,11 @@ vi.mock('@/app/actions', () => ({
 }))
 
 describe('SchedulePanel', () => {
-  it('generates weekly schedule and shows results', async () => {
+  it('loads weekly schedule and shows results', async () => {
     const user = userEvent.setup()
     render(<SchedulePanel initialSchedule={null} initialWeeklySchedule={null} />)
 
-    await user.click(screen.getByRole('button', { name: 'גנרט שבועי' }))
+    await user.click(screen.getByRole('button', { name: 'הצג לוז שבועי' }))
 
     expect(generateWeeklySchedule).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Sunday')).toBeInTheDocument()

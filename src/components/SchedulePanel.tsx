@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { generateSchedule, generateWeeklySchedule } from '@/app/actions'
-import { CalendarClock, RefreshCw, Sparkles } from 'lucide-react'
+import { CalendarClock, Sparkles } from 'lucide-react'
 
 type ParsedTable = {
   headers: string[]
@@ -108,22 +108,32 @@ export default function SchedulePanel({
     ? parsedTable.headers.findIndex((header) => /שעה|time/i.test(header))
     : -1
 
-  const handleRefresh = async () => {
+  const handleShowDaily = async () => {
+    if (dailySchedule) {
+      setMode('daily')
+      return
+    }
+
     setLoadingDaily(true)
     try {
-      const result = await generateSchedule(true)
+      const result = await generateSchedule()
       if (result.schedule) {
         setDailySchedule(result.schedule)
         setMode('daily')
       }
     } catch (error) {
-      console.error('Failed to refresh schedule:', error)
+      console.error('Failed to load daily schedule:', error)
     } finally {
       setLoadingDaily(false)
     }
   }
 
-  const handleWeeklyGenerate = async () => {
+  const handleShowWeekly = async () => {
+    if (weeklySchedule) {
+      setMode('weekly')
+      return
+    }
+
     setLoadingWeekly(true)
     try {
       const result = await generateWeeklySchedule()
@@ -132,7 +142,7 @@ export default function SchedulePanel({
         setMode('weekly')
       }
     } catch (error) {
-      console.error('Failed to generate weekly schedule:', error)
+      console.error('Failed to load weekly schedule:', error)
     } finally {
       setLoadingWeekly(false)
     }
@@ -158,31 +168,17 @@ export default function SchedulePanel({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setMode('daily')}
-              disabled={!dailySchedule || mode === 'daily'}
+              onClick={handleShowDaily}
+              disabled={loadingDaily}
               className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50"
             >
-              הצג יומי
-            </button>
-            <button
-              onClick={() => setMode('weekly')}
-              disabled={!weeklySchedule || mode === 'weekly'}
-              className="inline-flex items-center gap-2 rounded-xl border border-cyan-100/40 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-50 transition-colors hover:bg-cyan-200/20 disabled:opacity-50"
-            >
-              הצג שבועי
-            </button>
-            <button
-              onClick={handleRefresh}
-              disabled={loadingDaily}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-2 text-sm text-white transition-colors hover:bg-white/25 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${loadingDaily ? 'animate-spin' : ''}`} />
+              <Sparkles className={`h-4 w-4 ${loadingDaily ? 'animate-spin' : ''}`} />
               {loadingDaily ? 'מייצר...' : 'הצג לוז יומי'}
             </button>
             <button
-              onClick={handleWeeklyGenerate}
+              onClick={handleShowWeekly}
               disabled={loadingWeekly}
-              className="inline-flex items-center gap-2 rounded-xl border border-cyan-100/40 bg-cyan-200/15 px-3 py-2 text-sm text-cyan-50 transition-colors hover:bg-cyan-200/25 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-100/40 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-50 transition-colors hover:bg-cyan-200/20 disabled:opacity-50"
             >
               <Sparkles className={`h-4 w-4 ${loadingWeekly ? 'animate-spin' : ''}`} />
               {loadingWeekly ? 'מייצר...' : 'הצג לוז שבועי'}
@@ -283,8 +279,8 @@ export default function SchedulePanel({
             </h3>
             <p className="mt-1 text-sm text-slate-500">
               {mode === 'daily'
-                ? 'לחצו על רענון כדי לייצר תכנון ליום.'
-                : 'צרו תכנון שבועי כדי להתחיל.'}
+                ? 'לחצו על הצג לוז יומי כדי לטעון או לייצר תכנון ליום.'
+                : 'לחצו על הצג לוז שבועי כדי לטעון או לייצר תכנון לשבוע.'}
             </p>
             <p className="mt-1 text-xs text-slate-400">הקלד הודעה בצ׳אט כדי ליצור את הבלוק הראשון שלך.</p>
           </div>
